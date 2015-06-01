@@ -12,3 +12,5 @@ Versions of SLIDE: Nov 29 2004. URL: http://www.cs.berkeley.edu/~ug/slide/viewer
      install.bat
 6) Restart Windows. (If not, the tcl.init can't be found)
 DONE
+
+2. On Mac (Tried but the macsupport folder is not shown)
