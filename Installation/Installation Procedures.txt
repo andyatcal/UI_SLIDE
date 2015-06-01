@@ -1,0 +1,14 @@
+Installation of SLIDE on PC and Mac. DATE: JUNE 1 2015.
+
+Versions of SLIDE: Nov 29 2004. URL: http://www.cs.berkeley.edu/~ug/slide/viewer/
+
+1. On my Windows 7 (Ultimate) system.
+
+1) Download the Zip package slide2004.tar.gz. 
+2) Extract the folder to "C:\slide". (It can be other folders. But need to modify the registery "~/envvar" and "~/slideall" with the local directory of slide).
+3) Run cmd as administrator (If not, )
+4) cd c:\slide
+5) Run
+     install.bat
+6) Restart Windows. (If not, the tcl.init can't be found)
+DONE
