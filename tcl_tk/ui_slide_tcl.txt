@@ -28,6 +28,18 @@ The viewport can be scaled by draging the frame of displaying window.
 3. Jordan's UI idea for SLIDE:
 "For now it is more of a programmers interface for generating geometry. In the future, it would be nice to have an incremental drag and drop interface for creating additional geometry."
 
-4. My UI ideas
+4. My UI ideas:
+Now that camera translate, rotation, zoom in/out, cursor selection of elements are done. Some ideas:
+1) Select sub-elements. E.g., the vertices and edges of a triangle?
+2) Draw lines (plan/elevation view) in the viewport; or on the face of an element?
+3) Draw an element (e.g., sweep) and imported with transfromations into the current viewport?
+4) I can start by digging into tk widgets and try a simple task of drawing a straight line in SLIDE.
 
-Ref: Jordan Smith SLIDE Goals http://www.cs.berkeley.edu/~ug/slide/goals.shtml
+5. Python and TK GUI
+Python has an interface with TK GUI as well. I can go and check it out.
+
+
+Ref: 
+1. Jordan Smith SLIDE Goals http://www.cs.berkeley.edu/~ug/slide/goals.shtml
+2. Tkinter Doc: https://docs.python.org/2/library/tkinter.html
+
