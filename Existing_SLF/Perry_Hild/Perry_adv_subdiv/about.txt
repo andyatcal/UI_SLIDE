@@ -1,0 +1,2 @@
+A file with a more detailed initial CC subdivision mesh
+that allows to introduce lateral curvature into the ribbons.

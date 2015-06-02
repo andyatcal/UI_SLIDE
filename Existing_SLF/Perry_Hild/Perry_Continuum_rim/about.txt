@@ -1,0 +1,2 @@
+the rim definition for Perry's "Continuum".
+This needs to have the quad-mesh entered for the curved ribbons.

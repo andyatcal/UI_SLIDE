@@ -1,0 +1,708 @@
+### TetraGen_6-flared.slf
+#   A program to make surface sculptures similar to Perry's "Tetra"
+#   -- but with options to change the twist in the ribbons going along the tetra edges.
+#   individual ribbon specs with distinguished side colors
+# enhanced with change in cross section to yield smoother boundary curves.
+
+### CHS 2015/3/16
+
+###################################################
+
+
+## general links and definitions:
+
+tclinit {
+  set winName .slfWindow
+
+  source SLIDEUI.tcl
+  source MATH.tcl
+
+  set to_rad [expr $SLF_PI/180.0 ]
+  CreateGroupUI $winName gRoot
+}
+
+
+## setting up some sliders for variable parameters  #######################################################
+
+tclinit {
+  
+  proc CreateParUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set thick   [CreateScale $name $root  thick  "ribbon thick"    0.05   0.05   1.0    0.05  1 horizontal]
+    set rkink   [CreateScale $name $root  rkink  "ribbon rkink"    0      0.1    1.0    0.1   1 horizontal]
+    set csize   [CreateScale $name $root  csize  "cube-size"       2      1.0    5      0.1   1 horizontal]
+    set bstart  [CreateScale $name $root  bstart "ribbon start"    0.33   0.1    2      0.01  1 horizontal]
+    set bext    [CreateScale $name $root  bext   "ribbon bext"     0.5    0.3    3      0.1   1 horizontal]
+    set bsize   [CreateScale $name $root  bsize  "bulge-size"      3.9    2.0   10      0.1   1 horizontal]
+    set bwidth  [CreateScale $name $root  bwidth "bulge-width"     0.33   0.2    0.5    0.01  1 horizontal]
+    set rneck   [CreateScale $name $root  rneck  "ribon-necking"   0.3    0.2    1.2    0.1   1 horizontal]
+
+    set minTorsion   [CreateScale $name $root  minTorsion    "minTorsion"       1   0   1   1   1 horizontal]
+    set drawSweep    [CreateScale $name $root  drawSweep     "drawSweep"        1   0   1   1   1 horizontal]
+    set drawControls [CreateScale $name $root  drawControls  "drawControls"     1   0   1   1   1 horizontal]	
+    set drawPath     [CreateScale $name $root  drawPath      "drawPath"         0   0   1   1   1 horizontal]
+    set sweepSlices  [CreateScale $name $root  sweepSlices   "sweepSlices"     40   8  80   2   1 horizontal]
+ 
+    set xribtwist    [CreateScale $name $root  xribtwist     "+xrib twist"      0 -360  720  180   1 horizontal]
+    set yribtwist    [CreateScale $name $root  yribtwist     "+yrib twist"      0 -360  720  180   1 horizontal]
+    set zribtwist    [CreateScale $name $root  zribtwist     "+zrib twist"      0 -360  720  180   1 horizontal]
+    set xrib_twist   [CreateScale $name $root  xrib_twist    "-xrib twist"      0 -360  720  180   1 horizontal]
+    set yrib_twist   [CreateScale $name $root  yrib_twist    "-yrib twist"      0 -360  720  180   1 horizontal]
+    set zrib_twist   [CreateScale $name $root  zrib_twist    "-zrib twist"      0 -360  720  180   1 horizontal]
+
+    pack   $thick  $csize  $bext  $bsize  $bwidth  $rneck    $sweepSlices   $xribtwist $xrib_twist   $yribtwist $yrib_twist   $zribtwist $zrib_twist  $drawPath  -side top -fill x
+  }
+
+  CreateParUI $winName par
+}
+
+
+#####  Some elementary geometry   ######################
+
+## Coordinate axes:
+point ooo  ( 0 0 0 ) endpoint
+point xoo  ( {expr $par_bsize+2} 0 0 ) endpoint
+point oyo  ( 0 {expr $par_bsize+2} 0 ) endpoint
+point ooz  ( 0 0 {expr $par_bsize+2} ) endpoint
+
+polyline xaxis pointlist (ooo xoo) endpolyline
+polyline yaxis pointlist (ooo oyo) endpolyline
+polyline zaxis pointlist (ooo ooz) endpolyline
+
+group coord_axes
+  instance xaxis surface R endinstance
+  instance yaxis surface B endinstance
+  instance zaxis surface G endinstance
+endgroup
+
+###################################################
+
+#cube -- defining separation of tetra corners:
+point XYZ  ( 1  1  1 ) endpoint
+point XYC  ( 1  1  -1 ) endpoint
+point XBZ  ( 1  -1  1 ) endpoint
+point XBC  ( 1  -1  -1 ) endpoint
+point AYZ  ( -1  1  1 ) endpoint
+point AYC  ( -1  1  -1 ) endpoint
+point ABZ  ( -1  -1  1 ) endpoint
+point ABC  ( -1  -1  -1 ) endpoint
+
+face c1   (XYZ XBZ XBC XYC ) endface
+face c2   (XYZ XYC AYC AYZ ) endface
+face c3   (AYZ AYC ABC ABZ ) endface
+face c4   (ABZ ABC XBC XBZ ) endface
+face c5   (XYZ AYZ ABZ XBZ ) endface
+face c6   (XYC XBC ABC AYC ) endface
+
+object cube (c1 c2 c3 c4 c5 c6)    solid SLF_HOLLOW   shading SLF_WIRE   endobject
+
+
+######################################################################################
+(*
+## junction plate == six-sided prism;  fixed size to match the unit-width of the ribbons:
+point c0  ( 0      2  {expr  $par_thick} ) endpoint
+point c1  (-1.732  1  {expr  $par_thick} ) endpoint
+point c2  (-1.732 -1  {expr  $par_thick} ) endpoint
+point c3  ( 0     -2  {expr  $par_thick} ) endpoint
+point c4  ( 1.732 -1  {expr  $par_thick} ) endpoint
+point c5  ( 1.732  1  {expr  $par_thick} ) endpoint
+
+point c10  ( 0      2  {expr -$par_thick} ) endpoint
+point c11  (-1.732  1  {expr -$par_thick} ) endpoint
+point c12  (-1.732 -1  {expr -$par_thick} ) endpoint
+point c13  ( 0     -2  {expr -$par_thick} ) endpoint
+point c14  ( 1.732 -1  {expr -$par_thick} ) endpoint
+point c15  ( 1.732  1  {expr -$par_thick} ) endpoint
+
+face top (c0 c1 c2 c3 c4 c5)  surface C  endface
+face bot (c15 c14 c13 c12 c11 c10)  surface M  endface
+face side1 (c1 c0 c10 c11)  surface W  endface
+face side3 (c3 c2 c12 c13)  surface W  endface
+face side5 (c5 c4 c14 c15)  surface W  endface
+
+object jplate ( top bot  side1 side3 side5 ) endobject
+*)
+
+### REPLACE THE ABOVE WITH A TRIANGULAR JUNCTION PLATE:
+
+point t0  (-0.5773   1.0  {expr  $par_thick} ) endpoint
+point t1  (-0.5773  -1.0  {expr  $par_thick} ) endpoint
+point t2  ( 1.1547   0    {expr  $par_thick} ) endpoint
+
+point t10  (-0.5773   1.0  {expr -$par_thick} ) endpoint
+point t11  (-0.5773  -1.0  {expr -$par_thick} ) endpoint
+point t12  ( 1.1547   0    {expr -$par_thick} ) endpoint
+
+face top (t0 t1 t2 )     surface C  endface
+face bot ( t12 t11 t10)  surface M  endface
+
+object jplate ( top bot   ) endobject
+
+
+########  Rectangula ribbon cross section  #################################
+
+point ca  ( {expr  $par_thick}  1  0 ) endpoint
+point cb  ( {expr -$par_thick}  1  0 ) endpoint
+point cc  ( {expr -$par_thick} -1  0 ) endpoint
+point cd  ( {expr  $par_thick} -1  0 ) endpoint
+
+## >> Perhaps: add extra points to make it more like a channel; -- but then we also need a more complex junction plate!
+
+
+polyline rectangle  pointlist (ca cb cc cd ca)  endpolyline     
+
+crosssection csRect
+  type polyline  rectangle
+endcrosssection
+
+##  Individual edges for providing differently colored ribbon faces:
+polyline rectop  pointlist ( cb cc )  endpolyline     
+crosssection cstop    type polyline  rectop    endcrosssection
+
+polyline recbot  pointlist ( cd ca )  endpolyline     
+crosssection csbot    type polyline  recbot    endcrosssection
+
+polyline recs1  pointlist ( ca cb )  endpolyline     
+crosssection css1    type polyline  recs1    endcrosssection
+
+polyline recs2  pointlist ( cc cd )  endpolyline     
+crosssection css2    type polyline  recs2    endcrosssection
+
+
+
+#######  The Sweep Path for the ribbons  ################################################################################################
+
+## a circular Bezier arc going from the space diagonal (cube corners: csize) 
+##  -- actually offset by 0.866 to start at the edge of the hexagonal prims  --- MAKE THIS VARIABLE !
+##  ending at the face-center of an enlarged cube ( bsize).
+
+point p0  ( {expr $par_csize+0.4714}  {expr $par_csize-0.2357}   {expr $par_csize-0.2357}  ) endpoint
+point p1  ( {expr $par_csize+2*$par_bext}  {expr $par_csize-$par_bext}   {expr $par_csize-$par_bext} ) endpoint
+point p2  ( {expr $par_bsize}  {expr $par_bwidth*$par_csize}  {expr $par_bwidth*$par_csize} ) endpoint
+point p3  ( {expr $par_bsize}   0  0 ) endpoint
+
+## need to make 3 separate copies, because  ONE PATH  cannot take 3 different twist values -- even in different sweeps!
+
+controlpoint xcp1   point p1   scale(1 0.6 1)   rotate(0 0 {expr 0.2*$par_xribtwist})  endcontrolpoint 
+controlpoint ycp1   point p1   scale(1 0.6 1)   rotate(0 0 {expr 0.2*$par_yribtwist})  endcontrolpoint
+controlpoint zcp1   point p1   scale(1 0.6 1)   rotate(0 0 {expr 0.2*$par_zribtwist})  endcontrolpoint
+
+controlpoint x_cp1   point p1   scale(1 0.6 1)   rotate(0 0 {expr -0.2*$par_xrib_twist})  endcontrolpoint
+controlpoint y_cp1   point p1   scale(1 0.6 1)   rotate(0 0 {expr -0.2*$par_yrib_twist})  endcontrolpoint
+controlpoint z_cp1   point p1   scale(1 0.6 1)   rotate(0 0 {expr -0.2*$par_zrib_twist})  endcontrolpoint
+
+
+controlpoint xcp2   point p2   scale(1 {expr $par_rneck} 1)  endcontrolpoint
+controlpoint ycp2   point p2   scale(1 {expr $par_rneck} 1)  endcontrolpoint
+controlpoint zcp2   point p2   scale(1 {expr $par_rneck} 1)  endcontrolpoint
+
+controlpoint x_cp2   point p2   scale(1 {expr $par_rneck} 1)  endcontrolpoint
+controlpoint y_cp2   point p2   scale(1 {expr $par_rneck} 1)  endcontrolpoint
+controlpoint z_cp2   point p2   scale(1 {expr $par_rneck} 1)  endcontrolpoint
+
+
+controlpoint xcp3   point p3   scale(1 {expr $par_rneck} 1)  endcontrolpoint
+controlpoint ycp3   point p3   scale(1 {expr $par_rneck} 1)  endcontrolpoint
+controlpoint zcp3   point p3   scale(1 {expr $par_rneck} 1)  endcontrolpoint
+
+controlpoint x_cp3   point p3   scale(1 {expr $par_rneck} 1)  endcontrolpoint
+controlpoint y_cp3   point p3   scale(1 {expr $par_rneck} 1)  endcontrolpoint
+controlpoint z_cp3   point p3   scale(1 {expr $par_rneck} 1)  endcontrolpoint
+
+
+
+beziercurve xhalfrib
+  controlpointlist (  p0 xcp1 xcp2 xcp3  )  
+  slices {expr $par_sweepSlices}
+  drawcontrols {expr $par_drawControls}
+endbeziercurve
+
+beziercurve yhalfrib
+  controlpointlist (  p0 ycp1 ycp2 ycp3  )  
+  slices {expr $par_sweepSlices}
+  drawcontrols {expr $par_drawControls}
+endbeziercurve
+
+beziercurve zhalfrib
+  controlpointlist (  p0 zcp1 zcp2 zcp3  )  
+  slices {expr $par_sweepSlices}
+  drawcontrols {expr $par_drawControls}
+endbeziercurve
+
+# the paths for the ribbon crossing the negative half-axes:
+beziercurve x_halfrib
+  controlpointlist (  p0 x_cp1 x_cp2 x_cp3  )  
+  slices {expr $par_sweepSlices}
+  drawcontrols {expr $par_drawControls}
+endbeziercurve
+
+beziercurve y_halfrib
+  controlpointlist (  p0 y_cp1 y_cp2 y_cp3  )  
+  slices {expr $par_sweepSlices}
+  drawcontrols {expr $par_drawControls}
+endbeziercurve
+
+beziercurve z_halfrib
+  controlpointlist (  p0 z_cp1 z_cp2 z_cp3  )  
+  slices {expr $par_sweepSlices}
+  drawcontrols {expr $par_drawControls}
+endbeziercurve
+
+
+### Do separete sweeps for pairs of opposite edges, so we can have different amounts of twisting!
+
+## The four sides of one ribbon need separate sweeps so that they can be in different colors:
+
+sweep  xhribtop
+  path  xhalfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr -0.5*$par_xribtwist}
+  endpath
+  crosssection cstop   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  xhribbot
+  path  xhalfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr -0.5*$par_xribtwist}
+  endpath
+  crosssection csbot   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  xhribs1
+  path  xhalfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr -0.5*$par_xribtwist}
+  endpath
+  crosssection css1   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  xhribs2
+  path  xhalfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr -0.5*$par_xribtwist}
+  endpath
+  crosssection css2   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+
+## now the same for the ribbon crossing the negative half-axis
+sweep  x_hribtop
+  path  x_halfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr  0.5*$par_xrib_twist}
+  endpath
+  crosssection cstop   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  x_hribbot
+  path  x_halfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr  0.5*$par_xrib_twist}
+  endpath
+  crosssection csbot   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  x_hribs1
+  path  x_halfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr  0.5*$par_xrib_twist}
+  endpath
+  crosssection css1   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  x_hribs2
+  path  x_halfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr  0.5*$par_xrib_twist}
+  endpath
+  crosssection css2   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+
+
+group xribs
+  instance xhribtop      surface C  endinstance
+  instance xhribtop      surface C   rotate(1 0 0)(180)  endinstance
+  instance x_hribtop      surface C   rotate(0 0 1)(180)  endinstance
+  instance x_hribtop      surface C   rotate(1 0 0)(180)  rotate(0 0 1)(180)  endinstance
+
+  instance xhribbot      surface M  endinstance
+  instance xhribbot      surface M   rotate(1 0 0)(180)  endinstance
+  instance x_hribbot      surface M   rotate(0 0 1)(180)  endinstance
+  instance x_hribbot      surface M   rotate(1 0 0)(180)  rotate(0 0 1)(180)  endinstance
+
+  instance xhribs1      surface W  endinstance
+  instance xhribs1      surface W   rotate(1 0 0)(180)  endinstance
+  instance x_hribs1      surface W   rotate(0 0 1)(180)  endinstance
+  instance x_hribs1      surface W   rotate(1 0 0)(180)  rotate(0 0 1)(180)  endinstance
+
+  instance xhribs2      surface W  endinstance
+  instance xhribs2      surface W   rotate(1 0 0)(180)  endinstance
+  instance x_hribs2      surface W   rotate(0 0 1)(180)  endinstance
+  instance x_hribs2      surface W   rotate(1 0 0)(180)  rotate(0 0 1)(180)  endinstance
+endgroup
+
+
+##################################################
+
+sweep  yhribtop
+  path  yhalfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr -0.5*$par_yribtwist}
+  endpath
+  crosssection cstop   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  yhribbot
+  path  yhalfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr -0.5*$par_yribtwist}
+  endpath
+  crosssection csbot   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  yhribs1
+  path  yhalfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr -0.5*$par_yribtwist}
+  endpath
+  crosssection css1   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  yhribs2
+  path  yhalfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr -0.5*$par_yribtwist}
+  endpath
+  crosssection css2   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+
+## now the same for the ribbon crossing the negative half-axis:
+
+sweep  y_hribtop
+  path  y_halfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr  0.5*$par_yrib_twist}
+  endpath
+  crosssection cstop   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  y_hribbot
+  path  y_halfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr  0.5*$par_yrib_twist}
+  endpath
+  crosssection csbot   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  y_hribs1
+  path  y_halfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr  0.5*$par_yrib_twist}
+  endpath
+  crosssection css1   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  y_hribs2
+  path  y_halfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr  0.5*$par_yrib_twist}
+  endpath
+  crosssection css2   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+
+group yribs
+  instance yhribtop      surface C  endinstance
+  instance yhribtop      surface C   rotate(1 0 0)(180)  endinstance
+  instance y_hribtop      surface C   rotate(0 0 1)(180)  endinstance
+  instance y_hribtop      surface C   rotate(1 0 0)(180)  rotate(0 0 1)(180)  endinstance
+
+  instance yhribbot      surface M  endinstance
+  instance yhribbot      surface M   rotate(1 0 0)(180)  endinstance
+  instance y_hribbot      surface M   rotate(0 0 1)(180)  endinstance
+  instance y_hribbot      surface M   rotate(1 0 0)(180)  rotate(0 0 1)(180)  endinstance
+
+  instance yhribs1      surface W  endinstance
+  instance yhribs1      surface W   rotate(1 0 0)(180)  endinstance
+  instance y_hribs1      surface W   rotate(0 0 1)(180)  endinstance
+  instance y_hribs1      surface W   rotate(1 0 0)(180)  rotate(0 0 1)(180)  endinstance
+
+  instance yhribs2      surface W  endinstance
+  instance yhribs2      surface W   rotate(1 0 0)(180)  endinstance
+  instance y_hribs2      surface W   rotate(0 0 1)(180)  endinstance
+  instance y_hribs2      surface W   rotate(1 0 0)(180)  rotate(0 0 1)(180)  endinstance
+endgroup
+
+
+##################################################
+
+sweep  zhribtop
+  path  zhalfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr -0.5*$par_zribtwist}
+  endpath
+  crosssection cstop   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  zhribbot
+  path  zhalfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr -0.5*$par_zribtwist}
+  endpath
+  crosssection csbot   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  zhribs1
+  path  zhalfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr -0.5*$par_zribtwist}
+  endpath
+  crosssection css1   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  zhribs2
+  path  zhalfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr -0.5*$par_zribtwist}
+  endpath
+  crosssection css2   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+
+## now the same for the ribbon crossing the negative half-axis:
+
+sweep  z_hribtop
+  path  z_halfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr  0.5*$par_zrib_twist}
+  endpath
+  crosssection cstop   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  z_hribbot
+  path  z_halfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr  0.5*$par_zrib_twist}
+  endpath
+  crosssection csbot   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  z_hribs1
+  path  z_halfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr  0.5*$par_zrib_twist}
+  endpath
+  crosssection css1   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+sweep  z_hribs2
+  path  z_halfrib
+    minimizetorsion  {expr $par_minTorsion}
+    twist    {expr  0.5*$par_zrib_twist}
+  endpath
+  crosssection css2   endcrosssection  
+  drawpath {expr $par_drawPath}
+  drawsweep {expr $par_drawSweep}
+endsweep
+
+
+group zribs
+  instance zhribtop      surface C  endinstance
+  instance zhribtop      surface C   rotate(1 0 0)(180)  endinstance
+  instance z_hribtop      surface C   rotate(0 0 1)(180)  endinstance
+  instance z_hribtop      surface C   rotate(1 0 0)(180)  rotate(0 0 1)(180)  endinstance
+
+  instance zhribbot      surface M  endinstance
+  instance zhribbot      surface M   rotate(1 0 0)(180)  endinstance
+  instance z_hribbot      surface M   rotate(0 0 1)(180)  endinstance
+  instance z_hribbot      surface M   rotate(1 0 0)(180)  rotate(0 0 1)(180)  endinstance
+
+  instance zhribs1      surface W  endinstance
+  instance zhribs1      surface W   rotate(1 0 0)(180)  endinstance
+  instance z_hribs1      surface W   rotate(0 0 1)(180)  endinstance
+  instance z_hribs1      surface W   rotate(1 0 0)(180)  rotate(0 0 1)(180)  endinstance
+
+  instance zhribs2      surface W  endinstance
+  instance zhribs2      surface W   rotate(1 0 0)(180)  endinstance
+  instance z_hribs2      surface W   rotate(0 0 1)(180)  endinstance
+  instance z_hribs2      surface W   rotate(1 0 0)(180)  rotate(0 0 1)(180)  endinstance
+endgroup
+
+
+
+
+##########   Putting it all together  ###################
+
+
+group assembly
+  instance coord_axes   endinstance
+  instance cube    surface K  scale({expr $par_csize} {expr $par_csize} {expr $par_csize})   endinstance
+
+  instance jplate    rotate(0 1 0)(54.74)  rotate(0 0 1)(45)  translate({expr $par_csize} {expr $par_csize} {expr $par_csize})  endinstance
+  instance jplate    rotate(0 1 0)(54.74)  rotate(0 0 1)(45)  translate({expr $par_csize} {expr $par_csize} {expr $par_csize}) rotate(1 0 0)(180)  endinstance
+  instance jplate    rotate(0 1 0)(54.74)  rotate(0 0 1)(45)  translate({expr $par_csize} {expr $par_csize} {expr $par_csize}) rotate(0 1 0)(180)  endinstance
+  instance jplate    rotate(0 1 0)(54.74)  rotate(0 0 1)(45)  translate({expr $par_csize} {expr $par_csize} {expr $par_csize}) rotate(0 0 1)(180)  endinstance
+
+  instance xribs    endinstance
+  instance yribs    rotate(1 1 1)(120)  endinstance
+  instance zribs    rotate(1 1 1)(240)  endinstance
+endgroup
+
+
+####  Some surface colors  ################################
+
+surface R color (1 0 0) endsurface     # Red
+surface O color (0.9 0.6 0) endsurface # Orange
+surface Y color (1 1 0) endsurface     # Yellow
+surface L color (0.6 0.8 0) endsurface   # Lime
+surface G color (0 0.9 0) endsurface     # Green
+surface A color (0 0.9 0.7) endsurface # Aqua
+surface C color (0 1 1) endsurface     # Cyan
+surface U color (0 0.5 1) endsurface   # Uniform
+surface B color (0 0 1) endsurface     # Blue
+surface P color (0.6 0 1) endsurface   # Purple
+surface M color (1 0 1) endsurface     # Magenta
+surface Z color (1 0 0.5) endsurface   # Zinnober
+
+surface K color (0 0 0) endsurface     # blacK
+surface W color (1 1 1) endsurface     # White
+
+
+
+######################################################################################################
+# A generic setup for viewing SLF objects
+##########################################
+
+group world
+  lod {expr $gRoot_lod}
+  shading {expr $gRoot_shading}
+
+  instance  assembly   scale( 0.02 0.02 0.02 )   rotate(1 0 0)(-90)   endinstance    
+
+  instance amb
+    id main_amb
+  endinstance
+  instance sun
+    id front_sun
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+  instance anti_sun
+    id back_sun
+    rotate (1 0 0) (180)
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+endgroup
+
+
+light amb
+  type SLF_AMBIENT
+  color (0.4 0.4 0.4)
+endlight
+
+light sun
+  type SLF_DIRECTIONAL
+  color (0.5 0.5 0.5)
+endlight
+
+light anti_sun
+  type SLF_DIRECTIONAL
+  color (0.3 0.3 0.3)
+endlight
+
+
+camera cam   
+## choose one or the other mode:
+
+#  projection SLF_PARALLEL
+#  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 2.0)
+
+  projection SLF_PERSPECTIVE
+  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 -0.01)
+endcamera
+
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0.0 0.0 1 )
+  endinstance
+endgroup
+
+window Window
+  background (0.7 0.7 0.7)
+endwindow
+
+viewport vp Window
+endviewport
+
+render vp gCam.iCam.cam world 
+  light world.front_sun.sun
+  light world.back_sun.anti_sun
+  light world.main_amb.amb
+endrender
+
+########################################
+
+
