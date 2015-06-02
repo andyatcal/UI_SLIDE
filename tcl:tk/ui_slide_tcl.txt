@@ -1,0 +1,10 @@
+1. Possiblities of Tcl/Tk in the UI of SLIDE:
+"Because the SLIDE dynamics scripting language is Tcl, it is also possible for designers to call apon the rich set of graphic UI widgets presented by Tk during the initialization phase of their SLIDE description."
+
+"Using Tcl's ability to link Tcl procedure names to C or C++ procedures created by developers, SLIDE is able to provide a Tcl interface to the SLIDE geometry parser."
+
+Since SLIDE works as a Tcl interface, it make sense to use Tcl UI widgets to customize SLIDE UI.
+
+2. Existing UI in slide: "There is a user interface known as the "crystal ball interface" that allows the user to rotate their object so that they can view it from any arbitrary angle."
+
+Ref: Jordan Smith SLIDE Goals http://www.cs.berkeley.edu/~ug/slide/goals.shtml
