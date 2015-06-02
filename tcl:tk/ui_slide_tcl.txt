@@ -5,6 +5,29 @@
 
 Since SLIDE works as a Tcl interface, it make sense to use Tcl UI widgets to customize SLIDE UI.
 
-2. Existing UI in slide: "There is a user interface known as the "crystal ball interface" that allows the user to rotate their object so that they can view it from any arbitrary angle."
+2. Existing UIs in SLIDE: 
+"There is a user interface known as the "crystal ball interface" that allows the user to rotate their object so that they can view it from any arbitrary angle."
+
+Some existing UIs are defined in SLIDEUI.tcl. It comprises Buttons, Frames (for LOD/Shading/Solid/LightType/Projection), Creations (objects/instances/etc)
+
+We can switch between the camera mode and selection mode. Take IcosaGen.slf for example. 
+
+In camera mode:
+CAD: The cursor "crystal ball interface" rotate the position of camera
+EXPLORE: The cursor translate the postion of camera
+FLY: Left click, zoom in. Right click, zoom out.
+
+In selection mode:
+An element can be 1) selected 2) display the name in terminal 3) show the x,y,z axis and 4) Translate elements by draging.
+
+The viewport can be scaled by draging the frame of displaying window.
+
+(BUG REPORT: Shift + left click will result in missing elements)
+
+
+3. Jordan's UI idea for SLIDE:
+"For now it is more of a programmers interface for generating geometry. In the future, it would be nice to have an incremental drag and drop interface for creating additional geometry."
+
+4. My UI ideas
 
 Ref: Jordan Smith SLIDE Goals http://www.cs.berkeley.edu/~ug/slide/goals.shtml
