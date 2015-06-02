@@ -1,0 +1,664 @@
+### G4param.slf
+### Irena
+###########################################
+
+
+tclinit {
+
+  package require slideui
+  
+
+  proc CreateParamObject { name } {
+    set this $name
+    global $this
+
+    # Radius - inner
+    set ${this}(ri) 1.22
+    set ${this}(ri_min) 0
+    set ${this}(ri_max) 2
+    set ${this}(ri_resolution) 0.02
+
+    # Radius - outer
+    set ${this}(ro) 1.82
+    set ${this}(ro_min) 1
+    set ${this}(ro_max) 3
+    set ${this}(ro_resolution) 0.02
+
+    # Height - inner
+    set ${this}(hi) 0.90
+    set ${this}(hi_min) 0
+    set ${this}(hi_max) 2
+    set ${this}(hi_resolution) 0.02
+
+    # Height - outer
+    set ${this}(ho) 1.40
+    set ${this}(ho_min) 1
+    set ${this}(ho_max) 3
+    set ${this}(ho_resolution) 0.02
+
+        # Armpit displacement
+    set ${this}(pd) 0.72
+    set ${this}(pd_min) -0.5
+    set ${this}(pd_max) 2
+    set ${this}(pd_resolution) 0.02
+
+        # Top shoulder displacement
+    set ${this}(sdt) 0.84
+    set ${this}(sdt_min) -0.5
+    set ${this}(sdt_max) 2
+    set ${this}(sdt_resolution) 0.02
+
+        # Side shoulder displacement
+    set ${this}(sds) 0.58
+    set ${this}(sds_min) -0.5
+    set ${this}(sds_max) 2
+    set ${this}(sds_resolution) 0.02
+
+
+        # Arm horizontal displacement
+    set ${this}(ahd) 0.64
+    set ${this}(ahd_min) -1
+    set ${this}(ahd_max) 1
+    set ${this}(ahd_resolution) 0.02
+
+        # Arm vertical displacement
+    set ${this}(avd) 0.66
+    set ${this}(avd_min) -1
+    set ${this}(avd_max) 1
+    set ${this}(avd_resolution) 0.02
+
+        # Arm diameter
+    set ${this}(ad) 0.06
+    set ${this}(ad_min) -1
+    set ${this}(ad_max) 1
+    set ${this}(ad_resolution) 0.02
+
+        # Body diagonal displacement
+    set ${this}(bdd) 0.40
+    set ${this}(bdd_min) -1
+    set ${this}(bdd_max) 1
+    set ${this}(bdd_resolution) 0.02
+
+        # Body diameter
+    set ${this}(bd) 0.28
+    set ${this}(bd_min) -1
+    set ${this}(bd_max) 1
+    set ${this}(bd_resolution) 0.02
+
+
+        # Debug
+    set ${this}(debug) 0
+    set ${this}(debug_min) 0
+    set ${this}(debug_max) 1
+    set ${this}(debug_resolution) 1
+
+        return $this
+  }
+
+   proc CreateParamUI { parent name } {
+    set root $parent.f$name
+    set this $name
+
+    global $this
+    frame $root
+
+    ## SLIDER Frame
+    frame $root.fScales
+
+
+        ## Left
+    frame $root.fScales.fScalesLeft
+    
+        # Radius - inner
+    set widget [CreateScale $root.fScales.fScalesLeft s_ri \
+            ${this}(ri) "Inner radius" \
+            [subst $${this}(ri_min)] \
+            [subst $${this}(ri_max)] \
+            [subst $${this}(ri_resolution)] \
+            update]
+    pack $widget -side top -fill x
+    
+        # Radius - outer
+    set widget [CreateScale $root.fScales.fScalesLeft s_ro \
+            ${this}(ro) "Outer radius" \
+            [subst $${this}(ro_min)] \
+            [subst $${this}(ro_max)] \
+            [subst $${this}(ro_resolution)] \
+            update]
+    pack $widget -side top -fill x
+    
+        # Height - inner
+    set widget [CreateScale $root.fScales.fScalesLeft s_hi \
+            ${this}(hi) "Inner height" \
+            [subst $${this}(hi_min)] \
+            [subst $${this}(hi_max)] \
+            [subst $${this}(hi_resolution)] \
+            update]
+    pack $widget -side top -fill x
+    
+        # Height - outer
+    set widget [CreateScale $root.fScales.fScalesLeft s_ho \
+            ${this}(ho) "Outer height" \
+            [subst $${this}(ho_min)] \
+            [subst $${this}(ho_max)] \
+            [subst $${this}(ho_resolution)] \
+            update]
+    pack $widget -side top -fill x
+
+
+        # Armpit distance
+    set widget [CreateScale $root.fScales.fScalesLeft s_pd \
+            ${this}(pd) "Armpit displacement" \
+            [subst $${this}(pd_min)] \
+            [subst $${this}(pd_max)] \
+            [subst $${this}(pd_resolution)] \
+            update]
+    pack $widget -side top -fill x
+
+        # Top shoulder displacement
+    set widget [CreateScale $root.fScales.fScalesLeft s_sdt \
+            ${this}(sdt) "Top shoulder displacement" \
+            [subst $${this}(sdt_min)] \
+            [subst $${this}(sdt_max)] \
+            [subst $${this}(sdt_resolution)] \
+            update]
+    pack $widget -side top -fill x
+
+        # Side shoulder displacement
+    set widget [CreateScale $root.fScales.fScalesLeft s_sds \
+            ${this}(sds) "Side shoulder displacement" \
+            [subst $${this}(sds_min)] \
+            [subst $${this}(sds_max)] \
+            [subst $${this}(sds_resolution)] \
+            update]
+    pack $widget -side top -fill x
+
+
+
+
+        ## Right
+    frame $root.fScales.fScalesRight
+
+
+
+        # Arm horizontal displacement
+    set widget [CreateScale $root.fScales.fScalesRight s_ahd \
+            ${this}(ahd) "Arm horiz displacement" \
+            [subst $${this}(ahd_min)] \
+            [subst $${this}(ahd_max)] \
+            [subst $${this}(ahd_resolution)] \
+            update]
+    pack $widget -side top -fill x
+
+        # Arm vertical displacement
+    set widget [CreateScale $root.fScales.fScalesRight s_avd \
+            ${this}(avd) "Arm vert displacement" \
+            [subst $${this}(avd_min)] \
+            [subst $${this}(avd_max)] \
+            [subst $${this}(avd_resolution)] \
+            update]
+    pack $widget -side top -fill x
+
+        # Arm diameter
+    set widget [CreateScale $root.fScales.fScalesRight s_ad \
+            ${this}(ad) "Arm diameter" \
+            [subst $${this}(ad_min)] \
+            [subst $${this}(ad_max)] \
+            [subst $${this}(ad_resolution)] \
+            update]
+    pack $widget -side top -fill x
+
+        # Body diagonal displacement
+    set widget [CreateScale $root.fScales.fScalesRight s_bdd \
+            ${this}(bdd) "Body diag displacement" \
+            [subst $${this}(bdd_min)] \
+            [subst $${this}(bdd_max)] \
+            [subst $${this}(bdd_resolution)] \
+            update]
+    pack $widget -side top -fill x
+
+        # Body diameter
+    set widget [CreateScale $root.fScales.fScalesRight s_bd \
+            ${this}(bd) "Body diameter" \
+            [subst $${this}(bd_min)] \
+            [subst $${this}(bd_max)] \
+            [subst $${this}(bd_resolution)] \
+            update]
+    pack $widget -side top -fill x
+    
+        # Debug
+    set widget [CreateScale $root.fScales.fScalesRight s_d \
+            ${this}(debug) "DEBUG" \
+            [subst $${this}(debug_min)] \
+            [subst $${this}(debug_max)] \
+            [subst $${this}(debug_resolution)] \
+            update]
+    pack $widget -side top -fill x
+
+
+    pack $root.fScales.fScalesLeft $root.fScales.fScalesRight -side left -fill y
+
+    pack $root.fScales -side top -fill x
+
+    return $root
+  }
+
+  toplevel .slfWindow.param
+  wm geometry .slfWindow.param +50+50
+  CreateParamObject param
+  set widget [CreateParamUI .slfWindow.param param]
+  pack $widget
+}
+
+
+tclinit {
+
+        global p
+
+        set names {
+                vo_x vo_y vo_z
+                vi_x vi_y vi_z
+                pt_x pt_y pt_z
+                ps_x ps_y1 ps_y2 ps_z
+                st_x st_y1 st_y2 st_z
+                ss_x ss_y ss_z
+                ao_x ao_y1 ao_y2 ao_z
+                ai_x ai_y1 ai_y2 ai_z
+                at_x at_y1 at_y2 at_z
+                as_x as_y1 as_y2 as_z
+                bo_x bo_y bo_z
+                bi_x bi_y bi_z
+                bs_x bs_y1 bs_y2 bs_z
+        }
+
+        foreach n $names {
+                set p($n) 0
+        }
+}
+
+
+tclinit {
+
+        proc update { foo } {
+                global param p
+
+                # sqrt(3)
+                set sq3 [expr sqrt(3)]
+
+                # (ro + ri)/2
+                set rrp_2 [expr ($param(ro) + $param(ri)) / 2]
+
+                # (ro - ri)/2
+                set rrm_2 [expr ($param(ro) - $param(ri)) / 2]
+
+                # (ro - ri)/4
+                set rrm_4 [expr ($param(ro) - $param(ri)) / 4]
+
+                # (ro - ri)*sqrt(3)/4
+                set rrm3_4 [expr $sq3*$rrm_4]
+
+                # (ho + hi)/2
+                set hhp_2 [expr ($param(ho) + $param(hi)) / 2]
+
+                # (ho - hi)
+                set hhm [expr $param(ho) - $param(hi)]
+
+                # (ho - hi)/2
+                set hhm_2 [expr $hhm/2]
+
+                # pd
+                set pd [expr $param(pd)]
+
+                # pd/2
+                set pd_2 [expr $param(pd)/2]
+
+                # sqrt(3)*pd/2
+                set pd3_2 [expr $param(pd)*$sq3/2]
+
+
+
+                #### Globals
+
+
+                ## Outer tip
+                set p(vo_x) [expr $param(ro)]
+                set p(vo_y) 0
+                set p(vo_z) [expr $param(ho)]
+                if { $param(debug) } { puts "v_o = ($p(vo_x) $p(vo_y) $p(vo_z))" }
+
+                ## Inner tip
+                set p(vi_x) [expr $param(ri)]
+                set p(vi_y) 0
+                set p(vi_z) [expr $param(hi)]
+                if { $param(debug) } { puts "v_i = ($p(vi_x) $p(vi_y) $p(vi_z))" }
+
+
+
+                ## Top face armpit
+                set p(pt_x) [expr $p(vi_x)]
+                set p(pt_y) 0
+                set p(pt_z) [expr $p(vo_z) + $pd]
+                if { $param(debug) } { puts "p_t = ($p(pt_x) $p(pt_y) $p(pt_z))" }
+
+                ## Side face armpits
+                set p(ps_x) [expr $p(vi_x) + $rrm_4 + $pd_2]
+                set p(ps_y1) [expr $rrm3_4 + $pd3_2]
+                set p(ps_y2) [expr -$p(ps_y1)]
+                set p(ps_z) [expr $p(vi_z)]
+                if { $param(debug) } { puts "p_s1 = ($p(ps_x) $p(ps_y1) $p(ps_z))" }
+                if { $param(debug) } { puts "p_s2 = ($p(ps_x) $p(ps_y2) $p(ps_z))" }
+
+
+
+                ## Top face shoulders
+
+                # norm of displacement vector
+                set st_n [expr sqrt($rrm_4*$rrm_4 + $rrm3_4*$rrm3_4 + $hhm*$hhm)]
+                # multipliers
+                set st_m [expr $param(sdt)/$st_n]
+
+                set p(st_x) [expr $p(vi_x) + (1+$st_m)*$rrm_4]
+                set p(st_y1) [expr (1 + $st_m)*$rrm3_4]
+                set p(st_y2) [expr -$p(st_y1)]
+                set p(st_z) [expr $p(vo_z) + $st_m*$hhm]
+                if { $param(debug) } { puts "s_t1 = ($p(st_x) $p(st_y1) $p(st_z))" }
+                if { $param(debug) } { puts "s_t2 = ($p(st_x) $p(st_y2) $p(st_z))" }
+
+                ## Side face shoulder
+                set p(ss_x) [expr $p(vo_x) + $param(sds)]
+                set p(ss_y) 0
+                set p(ss_z) [expr $p(vi_z)]
+                if { $param(debug) } { puts "s_s = ($p(ss_x) $p(ss_y) $p(ss_z))" }
+
+
+
+                ## Arm points
+
+                # Outer
+                set p(ao_x) [expr $param(ro)/4 + ($param(ahd)+$param(ad))/2]
+                set p(ao_y1) [expr $param(ro)*$sq3/4 + ($param(ahd)+$param(ad))*$sq3/2]
+                set p(ao_y2) [expr -$p(ao_y1)]
+                set p(ao_z) [expr $param(ho) + $param(avd) + $param(ad)]
+
+                # Inner
+                set p(ai_x) [expr $param(ri)/4 + ($param(ahd)-$param(ad))/2]
+                set p(ai_y1) [expr $param(ri)*$sq3/4 + ($param(ahd)-$param(ad))*$sq3/2]
+                set p(ai_y2) [expr -$p(ai_y1)]
+                set p(ai_z) [expr $param(hi) + $param(avd) - $param(ad)]
+
+                # Top
+                set p(at_x) [expr $param(ri)/4 + ($param(ahd)-$param(ad))/2]
+                set p(at_y1) [expr $param(ri)*$sq3/4 + ($param(ahd)-$param(ad))*$sq3/2]
+                set p(at_y2) [expr -$p(at_y1)]
+                set p(at_z) [expr $param(ho) + $param(avd) + $param(ad)]
+
+                # Side
+                set p(as_x) [expr $param(ro)/4 + ($param(ahd)+$param(ad))/2]
+                set p(as_y1) [expr $param(ro)*$sq3/4 + ($param(ahd)+$param(ad))*$sq3/2]
+                set p(as_y2) [expr -$p(as_y1)]
+                set p(as_z) [expr $param(hi) + $param(avd) - $param(ad)]
+
+
+
+                ## Body points
+
+                ## Outer body point
+                set p(bo_x) [expr $param(ro) + $param(bdd) + $param(bd)]
+                set p(bo_y) 0
+                set p(bo_z) 0
+
+                ## Inner body point
+                set p(bi_x) [expr $param(ri) + $param(bdd) - $param(bd)]
+                set p(bi_y) 0
+                set p(bi_z) 0
+
+                ## Side body points
+                set p(bs_x) [expr $param(ri) + $rrm_4 + $param(bdd) + $param(bd)/2]
+                set p(bs_y1) [expr $rrm3_4 + $param(bd)*$sq3/2]
+                set p(bs_y2) [expr -$p(bs_y1)]
+                set p(bs_z) 0
+        }
+}
+
+
+
+#######################################################
+#######################################################
+
+tclinit {
+
+  proc CreateSubdivObject { name } {
+    set this $name
+
+    global $this
+
+    # subdivisions
+    set ${this}(subdivisions) 0
+    set ${this}(subdivisions_min) 0
+    set ${this}(subdivisions_max) 4
+    set ${this}(subdivisions_resolution) 1
+
+    # drawcontrols
+    set ${this}(drawcontrols) 0
+    set ${this}(drawcontrols_min) 0
+    set ${this}(drawcontrols_max) 1
+    set ${this}(drawcontrols_resolution) 1
+
+        # drawsurface
+        set ${this}(drawsurface) 1
+    set ${this}(drawsurface_min) 0
+    set ${this}(drawsurface_max) 1
+    set ${this}(drawsurface_resolution) 1
+
+    return $this
+  }
+
+  proc CreateSubdivUI { parent name } {
+    set root $parent.f$name
+    set this $name
+
+    global $this
+
+    frame $root
+
+    frame $root.fScales
+    
+        # subdivisions
+    set widget [CreateScale $root.fScales s_subdivisions \
+            ${this}(subdivisions) "Subdivisions" \
+            [subst $${this}(subdivisions_min)] \
+            [subst $${this}(subdivisions_max)] \
+            [subst $${this}(subdivisions_resolution)]]
+    pack $widget -side top -fill x
+
+    # drawcontrols
+    set widget [CreateScale $root.fScales s_drawcontrols \
+            ${this}(drawcontrols) "Draw Controls" \
+            [subst $${this}(drawcontrols_min)] \
+            [subst $${this}(drawcontrols_max)] \
+            [subst $${this}(drawcontrols_resolution)]]
+    pack $widget -side top -fill x
+
+    # drawcontrols
+    set widget [CreateScale $root.fScales s_drawsurface \
+            ${this}(drawsurface) "Draw Surface" \
+            [subst $${this}(drawsurface_min)] \
+            [subst $${this}(drawsurface_max)] \
+            [subst $${this}(drawsurface_resolution)]]
+    pack $widget -side top -fill x
+
+    pack $root.fScales -side top -fill x
+
+    return $root
+  }
+
+  ###############################################################################
+  # Use the procedures to create an UI with an associative array of values
+
+  toplevel .slfWindow.subdivision
+  wm geometry .slfWindow.subdivision +300+50
+
+  CreateSubdivObject subdiv
+  set widget [CreateSubdivUI .slfWindow.subdivision subdiv]
+  pack $widget
+}
+
+
+
+#######################################################
+#######################################################
+
+
+
+surface RED color ( 1 0 0 ) endsurface
+surface YEL color ( 1 1 0 ) endsurface
+surface GRN color ( 0 1 0 ) endsurface
+surface CYN color ( 0 0 1 ) endsurface
+surface BLU color ( 0 0 1 ) endsurface
+surface MAG color ( 1 0 1 ) endsurface
+surface WHT color ( 1 1 1 ) endsurface
+
+
+#######################################################
+
+
+
+### inner and outer tips
+point v_o ( {expr $p(vo_x)} {expr $p(vo_y)} {expr $p(vo_z)} ) endpoint
+point v_i ( {expr $p(vi_x)} {expr $p(vi_y)} {expr $p(vi_z)} ) endpoint
+
+### armpit points
+point p_t ( {expr $p(pt_x)} {expr $p(pt_y)} {expr $p(pt_z)} ) endpoint
+point p_s1 ( {expr $p(ps_x)} {expr $p(ps_y1)} {expr $p(ps_z)} ) endpoint
+point p_s2 ( {expr $p(ps_x)} {expr $p(ps_y2)} {expr $p(ps_z)} ) endpoint
+
+### shoulder points
+point s_t1 ( {expr $p(st_x)} {expr $p(st_y1)} {expr $p(st_z)} ) endpoint
+point s_t2 ( {expr $p(st_x)} {expr $p(st_y2)} {expr $p(st_z)} ) endpoint
+point s_s ( {expr $p(ss_x)} {expr $p(ss_y)} {expr $p(ss_z)} ) endpoint
+
+### arm points
+point a_o1 ( {expr $p(ao_x)} {expr $p(ao_y1)} {expr $p(ao_z)} ) endpoint
+point a_i1 ( {expr $p(ai_x)} {expr $p(ai_y1)} {expr $p(ai_z)} ) endpoint
+point a_s1 ( {expr $p(as_x)} {expr $p(as_y1)} {expr $p(as_z)} ) endpoint
+point a_t1 ( {expr $p(at_x)} {expr $p(at_y1)} {expr $p(at_z)} ) endpoint
+point a_o2 ( {expr $p(ao_x)} {expr $p(ao_y2)} {expr $p(ao_z)} ) endpoint
+point a_i2 ( {expr $p(ai_x)} {expr $p(ai_y2)} {expr $p(ai_z)} ) endpoint
+point a_s2 ( {expr $p(as_x)} {expr $p(as_y2)} {expr $p(as_z)} ) endpoint
+point a_t2 ( {expr $p(at_x)} {expr $p(at_y2)} {expr $p(at_z)} ) endpoint
+
+### body points
+point b_o ( {expr $p(bo_x)} {expr $p(bo_y)} {expr $p(bo_z)} ) endpoint
+point b_i ( {expr $p(bi_x)} {expr $p(bi_y)} {expr $p(bi_z)} ) endpoint
+point b_s1 ( {expr $p(bs_x)} {expr $p(bs_y1)} {expr $p(bs_z)} ) endpoint
+point b_s2 ( {expr $p(bs_x)} {expr $p(bs_y2)} {expr $p(bs_z)} ) endpoint
+
+
+
+### Faces
+
+face f_tt  (v_o s_t1 p_t s_t2) endface
+face f_t1  (v_o s_s p_s1 s_t1) endface
+face f_t2  (v_o s_t2 p_s2 s_s) endface
+
+face f_a1t (s_t1 a_o1 a_t1 p_t) endface
+face f_a1o (p_s1 a_s1 a_o1 s_t1) endface
+face f_a1b (v_i a_i1 a_s1 p_s1) endface
+face f_a1i (p_t a_t1 a_i1 v_i) endface
+
+face f_a2t (a_o2 s_t2 p_t a_t2) endface
+face f_a2o (a_s2 p_s2 s_t2 a_o2) endface
+face f_a2b (a_i2 v_i p_s2 a_s2) endface
+face f_a2i (a_t2 p_t v_i a_i2) endface
+
+face f_bo1 (p_s1 s_s b_o b_s1) endface
+face f_bo2 (s_s p_s2 b_s2 b_o) endface
+face f_bi2 (p_s2 v_i b_i b_s2) endface
+face f_bi1 (v_i p_s1 b_s1 b_i) endface
+
+object corner (f_tt f_t1 f_t2 f_a1t f_a1o f_a1b f_a1i f_a2t f_a2o f_a2b f_a2i f_bo1 f_bo2 f_bi2 f_bi1)
+#object corner (f_tt f_t1 f_t2 f_bo1 f_bo2 f_bi2 f_bi1)
+        solid SLF_SOLID
+        shading SLF_FLAT
+endobject
+
+##################################################
+
+group topMesh
+        instance corner
+        endinstance
+        instance corner
+                rotate (0 0 1) (120)
+        endinstance
+        instance corner
+                rotate (0 0 1) (-120)
+        endinstance
+endgroup
+
+group gWholeMesh
+        lod { if { $subdiv(drawsurface) == 1 } { expr $SLF_OFF } else { expr $SLF_FULL } }
+        instance topMesh
+        endinstance
+        instance topMesh
+                rotate (1 0 0) (180)
+        endinstance
+endgroup
+
+
+################# SUBDIVISION ########################################
+(*  for later use
+subdivision oSubdivSurf
+
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)+1  }
+  errormetric {expr $oSubdivision(errormetric)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawcurrent {expr $oSubdivision(drawcurrent)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+  vknots {expr $oSubdivision(a)}
+  vorder {expr $oSubdivision(b)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+  instance gWholeMesh
+    surface GRN
+  endinstance
+
+endsubdivision
+*)
+
+subdivision oSubdivSurf
+        lod { if { $subdiv(drawsurface) == 1 } { expr $SLF_FULL } else { expr $SLF_OFF } }
+        subdivisions {expr $subdiv(subdivisions)}
+        drawcontrols {expr $subdiv(drawcontrols)}
+
+        instance gWholeMesh
+                surface GRN
+        endinstance
+endsubdivision
+
+#######################################################
+
+group assembly
+  instance gWholeMesh
+    surface YEL
+        scale(0.3 0.3 0.3)
+  endinstance
+  instance oSubdivSurf
+    surface RED
+    scale(0.3 0.3 0.3)
+  endinstance 
+endgroup
+
+include "viewing.slf"
+

@@ -1,0 +1,73 @@
+# plug.slf
+# a cylindrical plug
+# CHS 2000/10/14
+#################################################################
+
+
+################## INITIALIZATIONS #########################
+
+tclinit {
+  set winName .slfWindow
+
+  source SLIDEUI.tcl
+  source MATH.tcl
+
+  set to_rad [expr $SLF_PI/180.0 ]
+  CreateGroupUI $winName gRoot
+}
+ 
+
+tclinit {
+
+  proc CreatePlugUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set basex [CreateScale $name $root basex "base X"     0.00    -5.0 5.0 0.01 1 horizontal]
+    set basey [CreateScale $name $root basey "base Y"     0.00    -5.0 5.0 0.01 1 horizontal]
+    set basez [CreateScale $name $root basez "base Z"     0.00    -5.0 5.0 0.01 1 horizontal]
+    set bslices [CreateScale $name $root bslices "base-slices" 40 20 200 1 1 horizontal]
+
+    pack $basex $basey $basez $bslices  -side top -fill x
+  }
+
+  CreatePlugUI $winName plug
+  puts "created PlugUI"
+}
+
+cylinder plug
+  thetaslices {expr $plug_bslices}
+  begincap 1
+  endcap 1
+endcylinder
+
+####### ASSEMBLY  ##############################
+
+group assembly
+  lod {expr $gRoot_lod}
+  shading {expr $gRoot_shading}
+
+  instance plug
+    scale ( 1 1 10 )
+    translate ( {expr $plug_basex}  {expr $plug_basey}  {expr $plug_basez} )
+  endinstance
+
+endgroup
+
+#####################################
+
+include "viewing.slf"
+
+# this scales the object down another factor of 10 !
+
+#####################################
+

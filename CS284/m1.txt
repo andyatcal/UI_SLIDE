@@ -1,0 +1,224 @@
+####################################################################################
+# Polyhedral Morin
+# Tien Fak Tan
+# Modified for double-sided, double colored faces by CHS 11/30/2000
+####################################################################################
+
+tclinit {
+  set winName .slfWINDOW
+
+  source SLIDEUI.tcl
+
+  CreateGroupUI $winName gRoot
+}
+
+
+#################### 
+# SURFACES
+#################### 
+
+surface D  color (0.25 0.25 0.25) endsurface
+surface W  color (1 1 1) endsurface
+surface R  color (1 0 0) endsurface
+surface G  color (0 1 0) endsurface
+surface B  color (0 0 1) endsurface
+surface M  color (1 0 1) endsurface
+surface Y  color (1 1 0) endsurface
+surface C  color (0 1 1) endsurface
+
+####################################################################################
+# Geometry
+####################################################################################
+
+
+(*
+## original cuboctahedron
+point A (0 -10 -10) endpoint
+point B (10 0 10) endpoint
+point C (0 10 -10) endpoint
+point D (-10 0 10) endpoint
+point E (-10 0 -10) endpoint
+point F (0 -10 10) endpoint
+point G (10 0 -10) endpoint
+point H (0 10 10) endpoint
+point I (-10 -10 0) endpoint
+point J (10 -10 0) endpoint
+point K (10 10 0) endpoint
+point L (-10 10 0) endpoint
+*)
+
+
+## Morin surface
+point A (-10 0 -5) endpoint
+point B (0 10 -5) endpoint
+point C (10 0 -5) endpoint
+point D (0 -10 -5) endpoint
+
+point E (-10 10 9) endpoint
+point F (10 10 9) endpoint
+point G (10 -10 9) endpoint
+point H (-10 -10 9) endpoint
+
+point I (-4 0 5) endpoint
+point J (0 4 5) endpoint
+point K (4 -0 5) endpoint
+point L (-0 -4 5) endpoint
+
+
+face Y0 (L K C)  surface Y  endface
+face Y1 (A E C)  surface G  endface
+face Y2 (A C G)  surface G  endface
+face Y3 (A G J)  surface G  endface
+face Y4 (A J I)  surface Y  endface
+face Y5 (A I E)  surface G  endface
+face Y6 (C K G)  surface G  endface
+face Y7 (C E L)  surface G  endface
+face Y8 (E I L)  surface G  endface
+face Y9 (G K J)  surface G  endface
+
+(*
+face R0 (K L C)  surface R  endface
+face R1 (E A C)  surface R  endface
+face R2 (C A G)  surface R  endface
+face R3 (G A J)  surface R  endface
+face R4 (J A I)  surface R  endface
+face R5 (I A E)  surface R  endface
+face R6 (K C G)  surface R  endface
+face R7 (E C L)  surface R  endface
+face R8 (I E L)  surface R  endface
+face R9 (K G J)  surface R  endface
+
+face Y10 (L I D)  surface Y  endface
+face Y11 (F B D)  surface Y  endface
+face Y12 (D B H)  surface Y  endface
+face Y13 (H B K)  surface Y  endface
+face Y14 (K B J)  surface Y  endface
+face Y15 (J B F)  surface Y  endface
+face Y16 (L D H)  surface Y  endface
+face Y17 (F D I)  surface Y  endface
+face Y18 (J F I)  surface Y  endface
+face Y19 (L H K)  surface Y  endface
+
+face R10 (I L D)  surface R  endface
+face R11 (B F D)  surface R  endface
+face R12 (B D H)  surface R  endface
+face R13 (B H K)  surface R  endface
+face R14 (B K J)  surface R  endface
+face R15 (B J F)  surface R  endface
+face R16 (D L H)  surface R  endface
+face R17 (D F I)  surface R  endface
+face R18 (F J I)  surface R  endface
+face R19 (H L K)  surface R  endface
+*)
+
+object morinSurfY
+(Y0 Y1 Y2 Y3 Y4 Y5 Y6 Y7 Y8 Y9 ) ##  Y10 Y11 Y12 Y13 Y14 Y15 Y16 Y17 Y18 Y19)
+endobject
+
+(*
+object morinSurfR
+(R0 R1 R2 R3 R4 R5 R6 R7 R8 R9 R10 R11 R12 R13 R14 R15 R16 R17 R18 R19)
+endobject
+*)
+
+group gPartViewable
+	instance morinSurfY	endinstance
+#	instance morinSurfR	endinstance
+endgroup
+
+####################################################################################
+
+
+
+
+####################
+
+# World
+
+####################
+
+
+group gWorld
+  lod {expr $gRoot_lod}
+  shading {expr $gRoot_shading}
+	instance gPartViewable
+
+	endinstance
+
+endgroup
+
+#################### 
+
+# CAMERA
+
+#################### 
+
+
+camera cam
+  projection SLF_PARALLEL
+  frustum ( -2 -2 -100) (2 2 100)
+endcamera
+
+group gCamera
+  instance cam
+    id instCam
+    translate ( 0.0 0.0 1.0 )
+  endinstance
+endgroup
+
+#################### 
+
+# LIGHT
+
+#################### 
+
+
+light lite
+  type SLF_DIRECTIONAL
+endlight
+
+group gLight
+  instance lite
+    id instLite
+
+    lookat
+      eye ( 1.0 1.0 1.0 )
+      target ( 0.0 0.0 0.0 )
+      up ( 0.0 1.0 0.0 )
+    endlookat
+
+  endinstance
+endgroup
+
+light lite2
+  type SLF_AMBIENT
+  color (0.5 0.5 0.5)
+endlight
+
+group gLight2
+  instance lite2
+    id instLite2
+  endinstance
+endgroup
+
+####################
+
+# RENDER
+
+####################
+
+
+window WINDOW
+#  background (1 1 1)
+endwindow
+
+viewport VIEWPORT WINDOW
+  origin ( 0.0 0.0 )
+  size ( 1.0 1.0 )
+endviewport
+
+render VIEWPORT gCamera.instCam.cam gWorld
+  light gLight.instLite.lite
+  light gLight2.instLite2.lite2
+endrender
+

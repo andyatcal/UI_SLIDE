@@ -1,0 +1,55 @@
+### The key elements  to make an almost  circular (cylindrical) sweep
+
+
+### Cross Section ###
+### The circle is just a place-holder for something more fancy ...
+
+crosssection crossect
+  type circle
+  radius {expr $param(tradius)}
+  slices {expr $param(wslices)}
+endcrosssection
+
+### Sweep Path ###
+
+point c6 (0 {expr $param(rradius)*sin(1.2*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(1.2*$SLF_PI*$param(arc))} ) endpoint
+point c5 (0 {expr $param(rradius)*sin(1.0*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(1.0*$SLF_PI*$param(arc))} ) endpoint
+point c4 (0 {expr $param(rradius)*sin(0.8*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.8*$SLF_PI*$param(arc))} ) endpoint
+point c3 (0 {expr $param(rradius)*sin(0.6*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.6*$SLF_PI*$param(arc))} ) endpoint
+point c2 (0 {expr $param(rradius)*sin(0.4*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.4*$SLF_PI*$param(arc))} ) endpoint
+point c1 (0 {expr $param(rradius)*sin(0.2*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.2*$SLF_PI*$param(arc))} ) endpoint
+point c0 (0 0  {expr $param(rradius)} ) endpoint
+point c_1 (0 {expr -$param(rradius)*sin(0.2*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.2*$SLF_PI*$param(arc))} ) endpoint
+point c_2 (0 {expr -$param(rradius)*sin(0.4*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.4*$SLF_PI*$param(arc))} ) endpoint
+point c_3 (0 {expr -$param(rradius)*sin(0.6*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.6*$SLF_PI*$param(arc))} ) endpoint
+point c_4 (0 {expr -$param(rradius)*sin(0.8*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.8*$SLF_PI*$param(arc))} ) endpoint
+point c_5 (0 {expr -$param(rradius)*sin(1.0*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(1.0*$SLF_PI*$param(arc))} ) endpoint
+point c_6 (0 {expr -$param(rradius)*sin(1.2*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(1.2*$SLF_PI*$param(arc))} ) endpoint
+
+bsplinecurve arcseg
+  order 4
+  controlpointlist ( c_6 c_5 c_4 c_3 c_2 c_1 c0 c1 c2 c3 c4 c5 c6 )
+  slices {expr $param(lslices)}
+  #drawcontrols {expr $param(drawControls)}
+endbsplinecurve
+
+
+### Putting them together ###
+
+sweep tube
+  path arcseg
+    minimizetorsion {expr $param(minTorsion)}
+    azimuth {expr $param(azim)}
+    twist {expr $param(twist)}
+    closed 1
+  endpath
+  crosssection crossect
+    begincap 0
+    endcap 0
+    transform
+      scale( 1 {expr $param(exce)} 1 ) ## make elliptic
+    endtransform
+  endcrosssection
+  #solid SLF_HOLLOW
+  meshtype SLF_QUADRILATERALS
+endsweep

@@ -1,0 +1,70 @@
+# readSTL.slf - read an STL file
+##################################################
+
+tclinit { 
+  package require parselib
+
+  puts "reading stl file"
+  set  foo [CreateSTLObject  brep test.stl ]
+  puts "done stl file"
+  slide create group gBrep 
+  slide create instance bogus gBrep $foo
+}
+
+##################################################
+
+surface sYEL
+  color ( 1 1 0 )
+endsurface
+
+group gRoot
+  instance gBrep
+    surface sYEL
+  endinstance
+endgroup
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0 0 1 )
+  endinstance
+endgroup
+
+camera cam
+  projection SLF_PERSPECTIVE
+  frustum ( -0.5 -0.5 -2 ) ( 0.5 0.5 -0.2 )
+endcamera
+
+light lAmbient
+  type SLF_AMBIENT
+  color ( 0.2 0.2 0.2 )
+endlight
+
+light lTop
+  type SLF_DIRECTIONAL
+  color ( 1.0 1.0 1.0 )
+endlight
+
+group gLight
+  instance lTop
+    id iTop
+    lookat
+      eye ( 0 0 0 )
+      target ( -1 -1 -1 )
+      up ( 0 1 0 )
+    endlookat
+    translate ( 1 1 1 )
+  endinstance
+endgroup
+
+render Viewport gCam.iCam.cam gRoot
+  light lAmbient
+  light gLight.iTop.lTop
+endrender
+
+viewport Viewport Window
+endviewport
+
+window Window
+  background ( 0.25 0.60 1.0 )
+endwindow

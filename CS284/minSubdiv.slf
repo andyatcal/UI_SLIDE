@@ -1,0 +1,116 @@
+##################################################
+# subdivision.slf - subdivision test file
+#
+
+tclinit { 
+
+  package require slideui
+
+  toplevel .slfWindow.ui
+  CreateSLIDESubdivisionObject oSubdivision
+  set widget [CreateSLIDESubdivisionUI .slfWindow.ui oSubdivision]
+  pack $widget
+}
+
+surface Y  color ( 1 1 0 )endsurface
+
+point XYZ (1 1 1) endpoint
+point XY (1 1 -1) endpoint
+point XZ (1 -1 1) endpoint
+point YZ (-1 1 1) endpoint
+point X (1 -1 -1) endpoint
+point Y (-1 1 -1) endpoint
+point Z (-1 -1 1) endpoint
+point N (-1 -1 -1) endpoint
+face x	( X XY XYZ XZ )endface
+face y	( Y YZ XYZ XY )endface
+face z	( Z XZ XYZ YZ )endface
+face a	( N Z YZ Y )endface
+face b	( N X XZ Z )endface
+face c	( N Y XY X )endface
+
+object oCube (x y z a b c ) endobject
+
+
+##################################################
+
+subdivision oSubdivision
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+  instance oCube endinstance
+endsubdivision
+
+##################################################
+# Set up view
+#
+
+group gRoot
+  instance oSubdivision  surface Y
+    scale ( 0.10 0.10 0.10 )
+  endinstance
+endgroup
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0 0 1 )
+  endinstance
+endgroup
+
+camera cam
+  projection SLF_PERSPECTIVE
+  frustum ( -0.5 -0.5 -2 ) ( 0.5 0.5 -0.2 )
+endcamera
+
+light lAmbient
+  type SLF_AMBIENT
+  color ( 0.2 0.2 0.2 )
+endlight
+
+light lTop
+  type SLF_DIRECTIONAL
+  color ( 1.0 1.0 1.0 )
+endlight
+
+group gLight
+  instance lTop
+    id iTop
+    lookat
+      eye ( 0 0 0 )
+      target ( -1 -1 -1 )
+      up ( 0 1 0 )
+    endlookat
+    translate ( 1 1 1 )
+  endinstance
+endgroup
+
+render Viewport gCam.iCam.cam gRoot
+#render Viewport gCam.iCam.cam oSubdivision
+  light lAmbient
+  light gLight.iTop.lTop
+endrender
+
+viewport Viewport Window
+endviewport
+
+window Window
+#  background ( 0 0 0 )
+#  background ( 1 1 1 )
+#  background ( 0 1 0 )
+  background ( 0.25 0.60 1.0 )
+endwindow

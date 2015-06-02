@@ -1,0 +1,123 @@
+# Icosahedron 
+# seen as a snub-tetra -- with corresponding coloring
+
+point Zy ( 0  0.618034  1 ) endpoint
+point Zb ( 0  -0.618034  1 ) endpoint
+point Xz ( 1  0  0.618034 ) endpoint
+point Xc ( 1  0  -0.618034 ) endpoint
+point Az ( -1  0  0.618034 ) endpoint
+point Ac ( -1  0  -0.618034 ) endpoint
+point Yx ( 0.618034  1  0 ) endpoint
+point Ya ( -0.618034  1  0 ) endpoint
+point Bx ( 0.618034  -1  0 ) endpoint
+point Ba ( -0.618034  -1  0 ) endpoint
+point Cy ( 0  0.618034  -1 ) endpoint
+point Cb ( 0  -0.618034  -1 ) endpoint
+
+surface R color (0.9 0.2 0.2) endsurface
+surface Rd color (0.7 0.3 0.3) endsurface
+surface Y color (0.8 0.9 0.2) endsurface
+surface Yd color (0.6 0.7 0.4) endsurface
+surface G color (0.2 0.9 0.2) endsurface
+surface Gd color (0.3 0.7 0.3) endsurface
+surface B color (0.2 0.8 0.9) endsurface
+surface Bd color (0.3 0.7 0.8) endsurface
+surface hole color (0 0 0) endsurface
+
+face Zx	(Xz Zy Zb) surface Rd endface
+face Za	(Az Zb Zy) surface Yd endface
+face Xy	(Yx Xz Xc) surface Rd endface
+face Xb	(Bx Xc Xz) surface Gd endface
+face Ay	(Ya Ac Az) surface Bd endface
+face Ab	(Ba Az Ac) surface Yd endface
+face Yz	(Zy Yx Ya) surface Rd endface
+face Yc	(Cy Ya Yx) surface Bd endface
+face Bz	(Zb Ba Bx) surface Yd endface
+face Bc	(Cb Bx Ba) surface Gd endface
+face Cx	(Xc Cb Cy) surface Gd endface
+face Ca	(Ac Cy Cb) surface Bd endface
+face XYZ (Zy Xz Yx) surface R endface
+face XBZ (Bx Xz Zb) surface hole endface
+face AYZ (Ya Az Zy) surface hole endface
+face ABZ (Zb Az Ba) surface Y endface
+face XYC (Yx Xc Cy) surface hole endface
+face XBC (Cb Xc Bx) surface G endface
+face AYC (Cy Ac Ya) surface B endface
+face ABC (Ba Ac Cb) surface hole endface
+
+object icosa (Zx Za Xy Xb Ay Ab Yz Yc Bz Bc Cx Ca XYZ XBZ AYZ ABZ XYC XBC AYC ABC)
+	solid SLF_SOLID
+	shading SLF_FLAT
+endobject
+
+group assembly
+  instance icosa  endinstance
+endgroup
+
+
+# include "viewing.slf"
+# A generic setup for viewing SLF objects
+##########################################
+
+light amb
+  type SLF_AMBIENT
+  color (0.2 0.2 0.2)
+endlight
+
+light sun
+  type SLF_DIRECTIONAL
+  color (0.8 0.8 0.8)
+endlight
+
+light anti_sun
+  type SLF_DIRECTIONAL
+  color (0.4 0.4 0.4)
+endlight
+
+group world
+  instance assembly   
+    scale ( 0.1 0.1 0.1 )
+  endinstance
+
+  instance amb
+    id main_amb
+  endinstance
+  instance sun
+    id front_sun
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+  instance anti_sun
+    id back_sun
+    rotate (1 0 0) (180)
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+endgroup
+
+camera cam
+   #projection SLF_PARALLEL
+   projection SLF_PERSPECTIVE
+  #frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 -0.01)
+  frustum ( -0.2 -0.2 -2.0 ) ( 0.2 0.2 -0.01)
+endcamera
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0.0 0.0 1 )
+  endinstance
+endgroup
+
+window Window
+  background (0 0 0.5)
+endwindow
+
+viewport vp Window
+endviewport
+
+render vp gCam.iCam.cam world 
+  light world.front_sun.sun
+  light world.back_sun.anti_sun
+  light world.main_amb.amb
+endrender

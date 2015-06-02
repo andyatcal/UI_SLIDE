@@ -1,0 +1,1179 @@
+## PA2
+## Joining Cubic Bezier Curves -- in 3D -- with G1 Continuity
+## Sample Tcl Program prepared by Jane Yen (modified by Carlo Sequin)
+################################################################################
+
+
+tclinit {
+  set winName .slfWINDOW
+
+  source SLIDEUI.tcl
+  source MATH.tcl
+
+  ###############################################################################
+  ### Create Sliders  for composite Bezier curve
+  ###############################################################################
+
+  proc CreateBezierUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+    wm geometry $root +50+150
+
+  ### These sliders change the geometry of the Bezier curve and thus will call the _update_ function
+    set dist         [CreateScaleCmd $name $root dist       "distance"   0.08 -0.4 0.9 0.02 1 horizontal update]
+    set angl         [CreateScaleCmd $name $root angl       "direction"  0.5  -1   2   0.02 1 horizontal update]
+    set p3x          [CreateScaleCmd $name $root p3x        "point3_X"   0.0  -5   5   0.1  1 horizontal update]
+    set p3y          [CreateScaleCmd $name $root p3y        "point3_Y"   0.0  -5   5   0.1  1 horizontal update]
+    set zscale       [CreateScaleCmd $name $root zscale     "Z-scale"    1.0   0   1   0.02 1 horizontal update]
+
+    set slices       [CreateScale $name $root slices        "slices"      30  3 30 1 1 horizontal]
+    set drawSweep    [CreateScale $name $root drawSweep     "drawSweep"    1  0  1 1 1 horizontal]
+    set drawCurve    [CreateScale $name $root drawCurve     "drawCurve"    0  0  1 1 1 horizontal]
+    set drawControls [CreateScale $name $root drawControls  "drawControls" 1  0  1 1 1 horizontal]
+    set debug        [CreateScale $name $root debug         "debug"        0  0  1 1 1 horizontal]
+
+     pack $dist $angl   $p3x $p3y $zscale   $slices $drawSweep $drawCurve $drawControls  -side top -fill x
+  }
+
+  CreateBezierUI $winName bez
+}
+
+
+tclinit {
+
+  ###############################################################################
+  ### Initialize Points (do not modify)
+  ###############################################################################
+
+  # 15 points to be interpolated
+  global p1x p1y p2x p2y p3x p3y p4x p4y p5x p5y p6x p6y p7x p7y p8x p8y p9x p9y 
+  global p10x p10y p11x p11y p12x p12y p13x p13y p14x p14y p15x p15y
+  global p0x p0y p16x p16y p17x p17y
+  global p0z p1z p2z p3z p4z p5z p6z p7z p8z p9z p10z p11z p12z p13z p14z p15z p16z p17z
+
+  set p1x  7.3
+  set p1y -2.2
+  set p1z -3.0
+  set p2x  4.8
+  set p2y -0.7
+  set p2z -1.0
+  set p3x  0.0
+  set p3y  0.0
+  set p3z  0.0
+  set p4x  0.1
+  set p4y  0.5
+  set p4z  1.0
+  set p5x -0.5
+  set p5y  5.0
+  set p5z  4.0
+  set p6x -0.5
+  set p6y  4.5
+  set p6z  4.0
+  set p7x -3.0
+  set p7y  2.3
+  set p7z  3.0
+  set p8x -1.0
+  set p8y -0.3
+  set p8z  1.0
+  set p9x -5.4
+  set p9y -1.1
+  set p9z -3.0
+  set p10x -8.4
+  set p10y -3.2
+  set p10z  4.0
+  set p11x -6.0
+  set p11y -4.4
+  set p11z -4.0
+  set p12x -5.9
+  set p12y -4.8
+  set p12z -4.0
+  set p13x -0.6
+  set p13y -2.2
+  set p13z -1.0
+  set p14x  2.8
+  set p14y -3.7
+  set p14z  3.0
+  set p15x  5.5
+  set p15y -3.8
+  set p15z -1.0
+  # end-around reptetition for closed B-spline
+  set p0x  [expr $p15x]
+  set p0y  [expr $p15y]
+  set p0z  [expr $p15z]
+  set p16x [expr $p1x]
+  set p16y [expr $p1y]
+  set p16z [expr $p1z]
+  set p17x [expr $p2x]
+  set p17y [expr $p2y]
+  set p17z [expr $p2z]
+
+  # intermediate bezier control points
+  set ptlist {b1_2x b1_2y b1_2z \
+              b2_2x b2_2y b2_2z \
+              b3_2x b3_2y b3_2z \
+              b4_2x b4_2y b4_2z \
+              b5_2x b5_2y b5_2z \
+              b6_2x b6_2y b6_2z \
+              b7_2x b7_2y b7_2z \
+              b8_2x b8_2y b8_2z \
+              b9_2x b9_2y b9_2z \
+              b10_2x b10_2y b10_2z \
+              b11_2x b11_2y b11_2z \
+              b12_2x b12_2y b12_2z \
+              b13_2x b13_2y b13_2z \
+              b14_2x b14_2y b14_2z \
+              b15_2x b15_2y b15_2z \
+
+              b1_3x b1_3y b1_3z \
+              b2_3x b2_3y b2_3z \
+              b3_3x b3_3y b3_3z \
+              b4_3x b4_3y b4_3z \
+              b5_3x b5_3y b5_3z \
+              b6_3x b6_3y b6_3z \
+              b7_3x b7_3y b7_3z \
+              b8_3x b8_3y b8_3z \
+              b9_3x b9_3y b9_3z \
+              b10_3x b10_3y b10_3z \
+              b11_3x b11_3y b11_3z \
+              b12_3x b12_3y b12_3z \
+              b13_3x b13_3y b13_3z \
+              b14_3x b14_3y b14_3z \
+	      b15_3x b15_3y b15_3z }
+
+  foreach pt $ptlist {
+    global $pt
+
+    set $pt 0
+  }
+}
+
+tclinit {
+
+  ###############################################################################
+  ### Calculate the 2nd intermediate bezier control points
+  ###############################################################################
+
+  proc calculate_pt2 { } {
+    global p0x p0y p1x p1y p2x p2y p3x p3y p4x p4y p5x p5y p6x p6y p7x p7y p8x p8y p9x p9y 
+    global p10x p10y p11x p11y p12x p12y p13x p13y p14x p14y p15x p15y p16x p16y p17x p17y
+    global p0z p1z p2z p3z p4z p5z p6z p7z p8z p9z p10z p11z p12z p13z p14z p15z p16z p17z
+    global b1_2x b1_2y b2_2x b2_2y b3_2x b3_2y b4_2x b4_2y b5_2x b5_2y b6_2x b6_2y
+    global b7_2x b7_2y b8_2x b8_2y b9_2x b9_2y b10_2x b10_2y b11_2x b11_2y b12_2x b12_2y
+    global b13_2x b13_2y b14_2x b14_2y b15_2x b15_2y
+    global b1_2z b2_2z b3_2z b4_2z b5_2z b6_2z b7_2z b8_2z b9_2z b10_2z b11_2z b12_2z b13_2z b14_2z b15_2z 
+    global b1_3z b2_3z b3_3z b4_3z b5_3z b6_3z b7_3z b8_3z b9_3z b10_3z b11_3z b12_3z b13_3z b14_3z b15_3z 
+    global bez_dist bez_angl bez_debug  bez_p3x bez_p3y bez_zscale
+
+    set p3x [expr $bez_p3x]
+    set p3y [expr $bez_p3y]
+
+
+    # for each bezier curve
+    for {set i 1} {$i <= 15} {incr i} {
+
+      if { $bez_debug } { puts "" }
+
+      ################################################
+      # get points i-1, i, i+1
+
+      # point i-1
+      set name p[subst [expr $i - 1]]x
+      eval "set pt0x $$name"
+      set name p[subst [expr $i - 1]]y
+      eval "set pt0y $$name"
+      set name p[subst [expr $i - 1]]z
+      eval "set pt0z $$name"
+      if { $bez_debug } { puts "pt0 = ($pt0x $pt0y)" }
+
+      # point i
+      set name p[subst [expr $i - 0]]x
+      eval "set pt1x $$name"
+      set name p[subst [expr $i - 0]]y
+      eval "set pt1y $$name"
+      set name p[subst [expr $i - 0]]z
+      eval "set pt1z $$name"
+      if { $bez_debug } { puts "pt1 = ($pt1x $pt1y)" }
+
+      # point i + 1
+      set name p[subst [expr $i + 1]]x
+      eval "set pt2x $$name"
+      set name p[subst [expr $i + 1]]y
+      eval "set pt2y $$name"
+      set name p[subst [expr $i + 1]]z
+      eval "set pt2z $$name"
+      if { $bez_debug } { puts "pt2 = ($pt2x $pt2y)" }
+
+
+  ################################################
+  # calculate point pi_2
+  ##  THIS IS THE SECTION YOU SHOULD MODIFY !
+  # Most of the elements that you need are already given
+  # Combine and use them in a suitable way.
+  # (The current formulation is just an arbitrary place holder to give you some ideas).
+  ################################################
+
+      ### midpoint of pt0 and pt2
+      set pt02x [expr ($pt0x + $pt2x) *0.5]
+      set pt02y [expr ($pt0y + $pt2y) *0.5]
+      set pt02z [expr ($pt0z + $pt2z)*$bez_zscale*0.5]
+
+      ### vector pt1 - pt0  along incoming control segment
+      set v01x [expr $pt1x - $pt0x]
+      set v01y [expr $pt1y - $pt0y]
+      set v01z [expr ($pt1z - $pt0z)*$bez_zscale]
+      ### normalize
+      set len01 [expr sqrt($v01x*$v01x + $v01y*$v01y + $v01z*$v01z)]
+      set nv01x [expr $v01x/$len01]
+      set nv01y [expr $v01y/$len01]
+      set nv01z [expr $v01z/$len01]
+
+      ### vector pt2 - pt1  along outgoing control segment
+      set v12x [expr $pt2x - $pt1x]
+      set v12y [expr $pt2y - $pt1y]
+      set v12z [expr ($pt2z - $pt1z)*$bez_zscale]
+      ### normalize
+      set len12 [expr sqrt($v12x*$v12x + $v12y*$v12y + $v12z*$v12z)]
+      set nv12x [expr $v12x/$len12]
+      set nv12y [expr $v12y/$len12]
+      set nv12z [expr $v12z/$len12]
+
+      ### an averaged vector between the above two directions
+      set alpha [expr $len12/($len01 + $len12)]
+      set beta [expr $len01/($len01 + $len12)]
+      set vavx [expr $alpha*$nv01x + $beta*$nv12x]
+      set vavy [expr $alpha*$nv01y + $beta*$nv12y]
+      set vavz [expr $alpha*$nv01z + $beta*$nv12z]
+      ### normalize
+      set lenav [expr sqrt($vavx*$vavx + $vavy*$vavy + $vavz*$vavz)]
+      set nvavx [expr $vavx/$lenav]
+      set nvavy [expr $vavy/$lenav]
+      set nvavz [expr $vavz/$lenav]
+
+      ### vector pt2 - pt0          ## inspired by Catmull-Rom-splines
+      set v02x [expr $pt2x - $pt0x]
+      set v02y [expr $pt2y - $pt0y]
+      set v02z [expr ($pt2z - $pt0z)*$bez_zscale]
+      ### normalize
+      set len02 [expr sqrt($v02x*$v02x + $v02y*$v02y + $v02z*$v02z)]
+      set nv02x [expr $v02x/$len02]
+      set nv02y [expr $v02y/$len02]
+      set nv02z [expr $v02z/$len02]
+
+  ##  Now put it all together -- somehow:   ## find your own appropriate way!
+      ### calculate pt2 of the Bezier Curve (pt1 pt2 pt3 pt4)
+      set x [expr $pt1x + ($nvavx*$len12*$bez_dist)]
+      set y [expr $pt1y + ($nvavy*$len12*$bez_dist)]
+      set z [expr $pt1z + ($nvavz*$len12*$bez_dist)]
+   ## perhaps?
+
+      set b[subst $i]_2x [expr $x]
+      set b[subst $i]_2y [expr $y]
+      set b[subst $i]_2z [expr $z*$bez_zscale]
+  ##  NEED TO FIX THIS BOGUS EXPRESSION FOR THE  Z-COMPONENT
+  
+      if { $bez_debug } { puts "b[expr $i]_2 ($x $y)" }
+    }
+  }
+
+  ###############################################################################
+  ### Calculate the 3rd intermediate bezier control points
+  ###############################################################################
+
+  proc calculate_pt3 { } {
+    global p0x p0y p1x p1y p2x p2y p3x p3y p4x p4y p5x p5y p6x p6y p7x p7y p8x p8y p9x p9y 
+    global p10x p10y p11x p11y p12x p12y p13x p13y p14x p14y p15x p15y p16x p16y p17x p17y
+    global p0z p1z p2z p3z p4z p5z p6z p7z p8z p9z p10z p11z p12z p13z p14z p15z p16z p17z
+    global b1_3x b1_3y b2_3x b2_3y b3_3x b3_3y b4_3x b4_3y b5_3x b5_3y b6_3x b6_3y
+    global b7_3x b7_3y b8_3x b8_3y b9_3x b9_3y b10_3x b10_3y b11_3x b11_3y b12_3x b12_3y
+    global b13_3x b13_3y b14_3x b14_3y b15_3x b15_3y
+    global b1_2z b2_2z b3_2z b4_2z b5_2z b6_2z b7_2z b8_2z b9_2z b10_2z b11_2z b12_2z b13_2z b14_2z b15_2z 
+    global b1_3z b2_3z b3_3z b4_3z b5_3z b6_3z b7_3z b8_3z b9_3z b10_3z b11_3z b12_3z b13_3z b14_3z b15_3z 
+    global bez_dist bez_angl bez_debug bez_zscale
+
+    # for each bezier curve
+    for {set i 1} {$i <= 15} {incr i} {
+
+      if { $bez_debug } { puts "" }
+
+      ################################################
+      # get points i, i+1, i+2
+
+      # point i
+      set name p[subst [expr $i - 0]]x
+      eval "set pt0x $$name"
+      set name p[subst [expr $i - 0]]y
+      eval "set pt0y $$name"
+      set name p[subst [expr $i - 0]]z
+      eval "set pt0z $$name"
+      if { $bez_debug } { puts "pt0 = ($pt0x $pt0y)" }
+
+      # point i + 1
+      set name p[subst [expr $i + 1]]x
+      eval "set pt1x $$name"
+      set name p[subst [expr $i + 1]]y
+      eval "set pt1y $$name"
+      set name p[subst [expr $i + 1]]z
+      eval "set pt1z $$name"
+      if { $bez_debug } { puts "pt1 = ($pt1x $pt1y)" }
+
+      # point i + 2
+      set name p[subst [expr $i + 2]]x
+      eval "set pt2x $$name"
+      set name p[subst [expr $i + 2]]y
+      eval "set pt2y $$name"
+      set name p[subst [expr $i + 2]]z
+      eval "set pt2z $$name"
+      if { $bez_debug } { puts "pt2 = ($pt2x $pt2y)" }
+
+
+  ################################################
+  # calculate point pi_3
+  ##  THIS IS THE SECTION YOU MAY MODIFY !
+  # The same basic pieces as above are given
+  # But a different formulation from pi_2 is used, giving not even G1 continuity.
+  # It is probably a good idea to use the SAME basic formulation for both points.
+  ################################################
+
+      ### midpoint of pt0 and pt2
+      set pt02x [expr ($pt0x + $pt2x) *0.5]
+      set pt02y [expr ($pt0y + $pt2y) *0.5]
+      set pt02z [expr ($pt0z + $pt2z)*$bez_zscale*0.5]
+
+      ### vector pt1 - pt0  along incoming control segment
+      set v01x [expr $pt1x - $pt0x]
+      set v01y [expr $pt1y - $pt0y]
+      set v01z [expr ($pt1z - $pt0z)*$bez_zscale]
+      ### normalize
+      set len01 [expr sqrt($v01x*$v01x + $v01y*$v01y + $v01z*$v01z)]
+      set nv01x [expr $v01x/$len01]
+      set nv01y [expr $v01y/$len01]
+      set nv01z [expr $v01z/$len01]
+
+      ### vector pt2 - pt1  along outgoing control segment
+      set v12x [expr $pt2x - $pt1x]
+      set v12y [expr $pt2y - $pt1y]
+      set v12z [expr ($pt2z - $pt1z)*$bez_zscale]
+      ### normalize
+      set len12 [expr sqrt($v12x*$v12x + $v12y*$v12y + $v12z*$v12z)]
+      set nv12x [expr $v12x/$len12]
+      set nv12y [expr $v12y/$len12]
+      set nv12z [expr $v12z/$len12]
+
+      ### an averaged vector between the above two directions
+      set alpha [expr $len12/($len01 + $len12)]
+      set beta [expr $len01/($len01 + $len12)]
+      set vavx [expr $alpha*$nv01x + $beta*$nv12x]
+      set vavy [expr $alpha*$nv01y + $beta*$nv12y]
+      set vavz [expr $alpha*$nv01z + $beta*$nv12z]
+      ### normalize
+      set lenav [expr sqrt($vavx*$vavx + $vavy*$vavy + $vavz*$vavz)]
+      set nvavx [expr $vavx/$lenav]
+      set nvavy [expr $vavy/$lenav]
+      set nvavz [expr $vavz/$lenav]
+
+      ### vector pt2 - pt0
+      set v02x [expr $pt2x - $pt0x]
+      set v02y [expr $pt2y - $pt0y]
+      set v02z [expr ($pt2z - $pt0z)*$bez_zscale]
+      ### normalize
+      set len02 [expr sqrt($v02x*$v02x + $v02y*$v02y + $v02z*$v02z)]
+      set nv02x [expr $v02x/$len02]
+      set nv02y [expr $v02y/$len02]
+      set nv02z [expr $v02z/$len02]
+
+  ##  Now put it all together -- somehow:     ## find your own appropriate way!
+      ### calculate pt2 of the Bezier Curve (pt1 pt2 pt3 pt4)                     ## or should you use the normalized values?
+      set x [expr $pt1x - ($nvavx*$len01*$bez_dist) ]
+      set y [expr $pt1y - ($nvavy*$len01*$bez_dist) ]   
+      set z [expr $pt1z - ($nvavz*$len01*$bez_dist) ]
+  ##  NOTE:  Do NOT put any  "# COMMENT" on any active Tcl line!  The parser will mess it up ...  :-(   ###
+  
+      set b[subst $i]_3x [expr $x]
+      set b[subst $i]_3y [expr $y]
+      set b[subst $i]_3z [expr $z*$bez_zscale]
+  
+      if { $bez_debug } { puts "b[expr $i]_3 ($x $y)" }
+    }
+  }
+
+  ###############################################################################
+  ### Update gets called when the "distance" slider variable changes.
+  ### This will recompute the intermediate control points
+  ###############################################################################
+
+  proc update { foo } { 
+    global bez_debug 
+
+     if { $bez_debug } { puts "                Changed Parameters" }
+
+     if { $bez_debug } { puts "================= Calculate Point 2 =================" }
+     calculate_pt2
+
+     if { $bez_debug } { puts "================= Calculate Point 3 =================" }
+     calculate_pt3
+  }
+}
+
+
+
+########################################################################################
+### Sweep controls and basic set-up for the new sweep -- an approximating B-spline.
+########################################################################################
+
+tclinit {
+
+  proc CreateSweepUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+        set root .$subname
+    } elseif { $parent == "." } {
+        set root .$subname
+    } else {
+        set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set spokes       [CreateScale $name $root spokes        "star Spokes"   3    2     7   1    1 horizontal]
+    set wormrad      [CreateScale $name $root wormrad       "star Radius"   0.4  0.1   1.0 0.05 1 horizontal]
+
+    set drawSweep    [CreateScale $name $root drawSweep     "drawSweep"     0    0     1   1    1 horizontal]
+    set drawCurve    [CreateScale $name $root drawCurve     "drawCurve"     0    0     1   1    1 horizontal]
+    set drawControls [CreateScale $name $root drawControls  "drawControls"  0    0     1   1    1 horizontal]
+    set ptradi       [CreateScale $name $root ptradi        "point radius"  0.02 0.01  0.1 0.01 1 horizontal]
+    set minTorsion   [CreateScale $name $root minTorsion    "minTorsion"    1    0     1   1    1 horizontal]
+    set azimuth      [CreateScale $name $root azimuth       "azimuth"       0 -180   180   1    1 horizontal]   
+    set twist        [CreateScale $name $root twist         "twist"         0 -360   360   1    1 horizontal]   
+    set closed       [CreateScale $name $root closed        "closed"        0    0     1   1    1 horizontal]   
+
+    pack   $spokes $wormrad    $drawSweep $drawCurve $drawControls  $ptradi   $minTorsion  $azimuth  $twist  $closed   -side top -fill x
+  }
+
+CreateSweepUI $winName swp
+}
+
+##########################
+##
+## This creates a window for sliders for each bezier cubic segmetn
+##
+## Written by Eric Turner
+##
+##########################
+tclinit {
+
+  ###############################################################################
+  ### Create Sliders  for composite Bezier curve
+  ###############################################################################
+
+  proc CreateTwisterUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set azimuth1      [CreateScale $name $root azimuth1       "azimuth1"       -76 -180   180   1    1 vertical]   
+    set twist1        [CreateScale $name $root twist1         "twist1"         33 -360   360   1    1 vertical]   
+    set azimuth2      [CreateScale $name $root azimuth2       "azimuth2"       27 -180   180   1    1 vertical]   
+    set twist2        [CreateScale $name $root twist2         "twist2"         0 -360   360   1    1 vertical]   
+    set azimuth3      [CreateScale $name $root azimuth3       "azimuth3"       -142 -180   180   1    1 vertical]   
+    set twist3        [CreateScale $name $root twist3         "twist3"         0 -360   360   1    1 vertical]   
+    set azimuth4      [CreateScale $name $root azimuth4       "azimuth4"       104 -180   180   1    1 vertical]   
+    set twist4        [CreateScale $name $root twist4         "twist4"         -22 -360   360   1    1 vertical]   
+    set azimuth5      [CreateScale $name $root azimuth5       "azimuth5"       44 -180   180   1    1 vertical]   
+    set twist5        [CreateScale $name $root twist5         "twist5"         0 -360   360   1    1 vertical]   
+    set azimuth6      [CreateScale $name $root azimuth6       "azimuth6"       11 -180   180   1    1 vertical]   
+    set twist6        [CreateScale $name $root twist6         "twist6"         0 -360   360   1    1 vertical]   
+    set azimuth7      [CreateScale $name $root azimuth7       "azimuth7"       -11 -180   180   1    1 vertical]   
+    set twist7        [CreateScale $name $root twist7         "twist7"         11 -360   360   1    1 vertical]   
+    set azimuth8      [CreateScale $name $root azimuth8       "azimuth8"       -98 -180   180   1    1 vertical]   
+    set twist8        [CreateScale $name $root twist8         "twist8"         11 -360   360   1    1 vertical]   
+    set azimuth9      [CreateScale $name $root azimuth9       "azimuth9"       -27 -180   180   1    1 vertical]   
+    set twist9        [CreateScale $name $root twist9         "twist9"         -11 -360   360   1    1 vertical]   
+    set azimuth10      [CreateScale $name $root azimuth10       "azimuth10"       -38 -180   180   1    1 vertical]   
+    set twist10        [CreateScale $name $root twist10         "twist10"         0 -360   360   1    1 vertical]   
+    set azimuth11      [CreateScale $name $root azimuth11       "azimuth11"       158 -180   180   1    1 vertical]   
+    set twist11        [CreateScale $name $root twist11         "twist11"         0 -360   360   1    1 vertical]   
+    set azimuth12      [CreateScale $name $root azimuth12       "azimuth12"       -120 -180   180   1    1 vertical]   
+    set twist12        [CreateScale $name $root twist12         "twist12"         0 -360   360   1    1 vertical]   
+    set azimuth13      [CreateScale $name $root azimuth13       "azimuth13"       104 -180   180   1    1 vertical]   
+    set twist13        [CreateScale $name $root twist13         "twist13"         0 -360   360   1    1 vertical]   
+    set azimuth14      [CreateScale $name $root azimuth14       "azimuth14"       -16 -180   180   1    1 vertical]   
+    set twist14        [CreateScale $name $root twist14         "twist14"         0 -360   360   1    1 vertical]   
+    set azimuth15      [CreateScale $name $root azimuth15       "azimuth15"       -109 -180   180   1    1 vertical]   
+    set twist15        [CreateScale $name $root twist15         "twist15"         0 -360   360   1    1 vertical]   
+     pack $azimuth1 $twist1 $azimuth2 $twist2 $azimuth3 $twist3 $azimuth4 $twist4 $azimuth5 $twist5 $azimuth6 $twist6 $azimuth7 $twist7 $azimuth8 $twist8 $azimuth9 $twist9 $azimuth10 $twist10 $azimuth11 $twist11 $azimuth12 $twist12 $azimuth13 $twist13 $azimuth14 $twist14 $azimuth15 $twist15 -side left -fill x
+  }
+
+  CreateTwisterUI $winName twister
+}
+
+(*  ### An alternative cross section in the form of a triangle
+point r1 ( 0 {expr $swp_wormrad} 0 ) endpoint
+point r2 ( 1 {expr -$swp_wormrad} 0 ) endpoint
+point r3 ( 1 2 0 ) endpoint
+
+polyline tria
+  pointlist (r1 r2 r3)
+endpolyline
+
+crosssection ribbon
+  type polyline tria
+endcrosssection
+*)
+
+
+crosssection csStar
+  type star                          ## a pre-defined SLIDE primitive
+    outerradius {expr $swp_wormrad}
+    innerradius 0.05
+    slices {expr $swp_spokes}
+endcrosssection
+
+
+## Activate this when doing the piece-wise linear, mitered sweep!
+polyline backbone
+  ### Just using the original 15 points:
+  #pointlist ( b1_1 b2_1 b3_1 b4_1 b5_1 b6_1 b7_1 b8_1 b9_1 b10_1 b11_1 b12_1 b13_1 b14_1 b15_1 b1_1 ) 
+
+  ### Using all the control and data points:
+  pointlist (b1_1 b1_2 b1_3 b2_1 b2_2 b2_3 b3_1 b3_2 b3_3 b4_1 b4_2 b4_3 b5_1 b5_2 b5_3  
+             b6_1 b6_2 b6_3 b7_1 b7_2 b7_3 b8_1 b8_2 b8_3 b9_1 b9_2 b9_3 b10_1 b10_2 b10_3   
+             b11_1 b11_2 b11_3 b12_1 b12_2 b12_3 b13_1 b13_2 b13_3 b14_1 b14_2 b14_3 b15_1 b15_2 b15_3 b1_1 ) 
+endpolyline
+
+(* ### ... and disable this B-spline definition when using the poly-line!
+bsplinecurve backbone   ## A closed cubic B-spline; endpoints have the necessary overlap.
+  order 4
+  controlpointlist (b15_1   b1_1 b2_1 b3_1 b4_1 b5_1 b6_1 b7_1 b8_1 b9_1 b10_1 b11_1 b12_1 b13_1 b14_1 b15_1   b1_1 b2_1 ) 
+  drawcontrols {expr $swp_drawControls}
+  slices {expr 15*$bez_slices}
+endbsplinecurve
+*)
+
+
+
+sweep ringworm   ## The B-spline sweep.
+  path backbone
+    closed {expr $swp_closed}
+    minimizetorsion {expr $swp_minTorsion}
+    symmetry  5  #{expr $swp_spokes}
+    azimuth {expr $swp_azimuth}
+    twist {expr $swp_twist}
+  endpath
+  crosssection csStar  endcrosssection
+  drawsweep {expr $swp_drawSweep}
+  drawpath {expr $swp_drawCurve}
+endsweep
+
+
+
+############################## 
+# SURFACE PROPERTY DEFINITIONS
+############################## 
+surface sGrey
+  color (0.25 0.25 0.25)
+endsurface
+
+surface sBlue
+  color (0.25 0.25 0.9)
+endsurface
+
+surface sRed
+  color (0.9 0.25 0.25)
+endsurface
+
+surface sYellow
+  color (0.8 0.8 0.25)
+endsurface
+
+surface sGreen
+  color (0.25 0.9 0.25)
+endsurface
+
+####################################
+# SPHERES TO MARK THE CONTROL POINTS
+####################################
+
+sphere sph
+  radius {expr $swp_ptradi} 
+endsphere
+
+group points_to_interpolate
+  instance sph  
+    surface sRed
+  endinstance
+  instance sph  #1
+    translate ({expr $p1x} {expr $p1y} {expr $p1z*$bez_zscale})
+  endinstance
+  instance sph  #2
+    translate ({expr $p2x} {expr $p2y} {expr $p2z*$bez_zscale})
+  endinstance
+  instance sph  #3
+    translate ({expr $p3x} {expr $p3y} {expr $p3z*$bez_zscale})
+  endinstance
+  instance sph  #4
+    translate ({expr $p4x} {expr $p4y} {expr $p4z*$bez_zscale})
+  endinstance
+  instance sph #5
+    translate ({expr $p5x} {expr $p5y} {expr $p5z*$bez_zscale})
+  endinstance
+  instance sph #6
+    translate ({expr $p6x} {expr $p6y} {expr $p6z*$bez_zscale})
+  endinstance
+  instance sph #7
+    translate ({expr $p7x} {expr $p7y} {expr $p7z*$bez_zscale})
+  endinstance
+  instance sph #8
+    translate ({expr $p8x} {expr $p8y} {expr $p8z*$bez_zscale})
+  endinstance
+  instance sph #9
+    translate ({expr $p9x} {expr $p9y} {expr $p9z*$bez_zscale})
+  endinstance
+  instance sph #10
+    translate ({expr $p10x} {expr $p10y} {expr $p10z*$bez_zscale})
+  endinstance
+  instance sph #11
+    translate ({expr $p11x} {expr $p11y} {expr $p11z*$bez_zscale})
+  endinstance
+  instance sph #12
+    translate ({expr $p12x} {expr $p12y} {expr $p12z*$bez_zscale})
+  endinstance
+  instance sph #13
+    translate ({expr $p13x} {expr $p13y} {expr $p13z*$bez_zscale})
+  endinstance
+  instance sph #14
+    translate ({expr $p14x} {expr $p14y} {expr $p14z*$bez_zscale})
+  endinstance
+  instance sph #15
+    translate ({expr $p15x} {expr $p15y} {expr $p15z*$bez_zscale})
+  endinstance
+endgroup
+
+#############################
+# Cubic Bezier Curve Segments
+############################# 
+
+point b1_1 ( {expr $p1x} {expr $p1y} {expr $p1z*$bez_zscale} ) endpoint
+point b1_2 ( {expr $b1_2x} {expr $b1_2y} {expr $b1_2z} ) endpoint
+point b1_3 ( {expr $b1_3x} {expr $b1_3y} {expr $b1_3z} ) endpoint
+point b1_4 ( {expr $p2x} {expr $p2y} {expr $p2z*$bez_zscale} ) endpoint
+
+beziercurve bz1
+  controlpointlist (b1_1 b1_2 b1_3  b1_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg1
+  path bz1
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth1}
+    twist {expr $twister_twist1}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b2_1 ( {expr $p2x} {expr $p2y} {expr $p2z*$bez_zscale} ) endpoint
+point b2_2 ( {expr $b2_2x} {expr $b2_2y} {expr $b2_2z} ) endpoint
+point b2_3 ( {expr $b2_3x} {expr $b2_3y} {expr $b2_3z} ) endpoint
+point b2_4 ( {expr $p3x} {expr $p3y} {expr $p3z*$bez_zscale} ) endpoint
+
+beziercurve bz2
+  controlpointlist (b2_1 b2_2 b2_3  b2_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg2
+  path bz2
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth2}
+    twist {expr $twister_twist2}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b3_1 ( {expr $p3x} {expr $p3y} {expr $p3z*$bez_zscale} ) endpoint
+point b3_2 ( {expr $b3_2x} {expr $b3_2y} {expr $b3_2z} ) endpoint
+point b3_3 ( {expr $b3_3x} {expr $b3_3y} {expr $b3_3z} ) endpoint
+point b3_4 ( {expr $p4x} {expr $p4y} {expr $p4z*$bez_zscale} ) endpoint
+
+beziercurve bz3
+  controlpointlist (b3_1 b3_2 b3_3  b3_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg3
+  path bz3
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth3}
+    twist {expr $twister_twist3}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b4_1 ( {expr $p4x} {expr $p4y} {expr $p4z*$bez_zscale} ) endpoint
+point b4_2 ( {expr $b4_2x} {expr $b4_2y} {expr $b4_2z} ) endpoint
+point b4_3 ( {expr $b4_3x} {expr $b4_3y} {expr $b4_3z} ) endpoint
+point b4_4 ( {expr $p5x} {expr $p5y} {expr $p5z*$bez_zscale} ) endpoint
+
+beziercurve bz4
+  controlpointlist (b4_1 b4_2 b4_3 b4_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg4
+  path bz4
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth4}
+    twist {expr $twister_twist4}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b5_1 ( {expr $p5x} {expr $p5y} {expr $p5z*$bez_zscale} ) endpoint
+point b5_2 ( {expr $b5_2x} {expr $b5_2y} {expr $b5_2z} ) endpoint
+point b5_3 ( {expr $b5_3x} {expr $b5_3y} {expr $b5_3z} ) endpoint
+point b5_4 ( {expr $p6x} {expr $p6y} {expr $p6z*$bez_zscale} ) endpoint
+
+beziercurve bz5
+  controlpointlist (b5_1 b5_2 b5_3 b5_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg5
+  path bz5
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth5}
+    twist {expr $twister_twist5}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b6_1 ( {expr $p6x} {expr $p6y} {expr $p6z*$bez_zscale} ) endpoint
+point b6_2 ( {expr $b6_2x} {expr $b6_2y} {expr $b6_2z} ) endpoint
+point b6_3 ( {expr $b6_3x} {expr $b6_3y} {expr $b6_3z} ) endpoint
+point b6_4 ( {expr $p7x} {expr $p7y} {expr $p7z*$bez_zscale} ) endpoint
+
+beziercurve bz6
+  controlpointlist (b6_1 b6_2 b6_3 b6_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg6
+  path bz6
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth6}
+    twist {expr $twister_twist6}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b7_1 ( {expr $p7x} {expr $p7y} {expr $p7z*$bez_zscale} ) endpoint
+point b7_2 ( {expr $b7_2x} {expr $b7_2y} {expr $b7_2z} ) endpoint
+point b7_3 ( {expr $b7_3x} {expr $b7_3y} {expr $b7_3z} ) endpoint
+point b7_4 ( {expr $p8x} {expr $p8y} {expr $p8z*$bez_zscale} ) endpoint
+
+beziercurve bz7
+  controlpointlist (b7_1 b7_2 b7_3 b7_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg7
+  path bz7
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth7}
+    twist {expr $twister_twist7}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b8_1 ( {expr $p8x} {expr $p8y} {expr $p8z*$bez_zscale} ) endpoint
+point b8_2 ( {expr $b8_2x} {expr $b8_2y} {expr $b8_2z} ) endpoint
+point b8_3 ( {expr $b8_3x} {expr $b8_3y} {expr $b8_3z} ) endpoint
+point b8_4 ( {expr $p9x} {expr $p9y} {expr $p9z*$bez_zscale} ) endpoint
+
+beziercurve bz8
+  controlpointlist (b8_1 b8_2 b8_3 b8_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg8
+  path bz8
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth8}
+    twist {expr $twister_twist8}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b9_1 ( {expr $p9x} {expr $p9y} {expr $p9z*$bez_zscale} ) endpoint
+point b9_2 ( {expr $b9_2x} {expr $b9_2y} {expr $b9_2z} ) endpoint
+point b9_3 ( {expr $b9_3x} {expr $b9_3y} {expr $b9_3z} ) endpoint
+point b9_4 ( {expr $p10x} {expr $p10y} {expr $p10z*$bez_zscale} ) endpoint
+
+beziercurve bz9
+  controlpointlist (b9_1 b9_2 b9_3 b9_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg9
+  path bz9
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth9}
+    twist {expr $twister_twist9}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b10_1 ( {expr $p10x} {expr $p10y} {expr $p10z*$bez_zscale} ) endpoint
+point b10_2 ( {expr $b10_2x} {expr $b10_2y} {expr $b10_2z} ) endpoint
+point b10_3 ( {expr $b10_3x} {expr $b10_3y} {expr $b10_3z} ) endpoint
+point b10_4 ( {expr $p11x} {expr $p11y} {expr $p11z*$bez_zscale} ) endpoint
+
+beziercurve bz10
+  controlpointlist (b10_1 b10_2 b10_3 b10_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg10
+  path bz10
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth10}
+    twist {expr $twister_twist10}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b11_1 ( {expr $p11x} {expr $p11y} {expr $p11z*$bez_zscale} ) endpoint
+point b11_2 ( {expr $b11_2x} {expr $b11_2y} {expr $b11_2z} ) endpoint
+point b11_3 ( {expr $b11_3x} {expr $b11_3y} {expr $b11_3z} ) endpoint
+point b11_4 ( {expr $p12x} {expr $p12y} {expr $p12z*$bez_zscale} ) endpoint
+
+beziercurve bz11
+  controlpointlist (b11_1 b11_2 b11_3 b11_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg11
+  path bz11
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth11}
+    twist {expr $twister_twist11}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b12_1 ( {expr $p12x} {expr $p12y} {expr $p12z*$bez_zscale} ) endpoint
+point b12_2 ( {expr $b12_2x} {expr $b12_2y} {expr $b12_2z} ) endpoint
+point b12_3 ( {expr $b12_3x} {expr $b12_3y} {expr $b12_3z} ) endpoint
+point b12_4 ( {expr $p13x} {expr $p13y} {expr $p13z*$bez_zscale} ) endpoint
+
+beziercurve bz12
+  controlpointlist (b12_1 b12_2 b12_3 b12_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg12
+  path bz12
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth12}
+    twist {expr $twister_twist12}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b13_1 ( {expr $p13x} {expr $p13y} {expr $p13z*$bez_zscale} ) endpoint
+point b13_2 ( {expr $b13_2x} {expr $b13_2y} {expr $b13_2z} ) endpoint
+point b13_3 ( {expr $b13_3x} {expr $b13_3y} {expr $b13_3z} ) endpoint
+point b13_4 ( {expr $p14x} {expr $p14y} {expr $p14z*$bez_zscale} ) endpoint
+
+beziercurve bz13
+  controlpointlist (b13_1 b13_2 b13_3 b13_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg13
+  path bz13
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth13}
+    twist {expr $twister_twist13}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b14_1 ( {expr $p14x} {expr $p14y} {expr $p14z*$bez_zscale} ) endpoint
+point b14_2 ( {expr $b14_2x} {expr $b14_2y} {expr $b14_2z} ) endpoint
+point b14_3 ( {expr $b14_3x} {expr $b14_3y} {expr $b14_3z} ) endpoint
+point b14_4 ( {expr $p15x} {expr $p15y} {expr $p15z*$bez_zscale} ) endpoint
+
+beziercurve bz14
+  controlpointlist (b14_1 b14_2 b14_3 b14_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg14
+  path bz14
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth14}
+    twist {expr $twister_twist14}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+point b15_1 ( {expr $p15x} {expr $p15y} {expr $p15z*$bez_zscale} ) endpoint
+point b15_2 ( {expr $b15_2x} {expr $b15_2y} {expr $b15_2z} ) endpoint
+point b15_3 ( {expr $b15_3x} {expr $b15_3y} {expr $b15_3z} ) endpoint
+point b15_4 ( {expr $p1x} {expr $p1y} {expr $p1z*$bez_zscale} ) endpoint   ## closing back to the first point
+
+beziercurve bz15
+  controlpointlist (b15_1 b15_2 b15_3 b15_4)
+  slices {expr $bez_slices}
+  drawcontrols {expr $bez_drawControls}
+endbeziercurve
+
+sweep bezSeg15
+  path bz15
+    minimizetorsion {expr $swp_minTorsion}
+    azimuth {expr $twister_azimuth15}
+    twist {expr $twister_twist15}
+  endpath
+  crosssection csStar
+  endcrosssection
+  drawsweep {expr $bez_drawSweep}
+  drawpath {expr $bez_drawCurve}
+endsweep
+
+
+####################
+# World
+####################
+
+group gWorld
+  instance points_to_interpolate
+  endinstance
+
+###  THIS IS THE APPROXIMATING B-SPLINE ###
+  instance
+    ringworm
+    surface sRed
+  endinstance
+
+### These are the Bezier segments and sweeps ###
+  instance bezSeg1
+    surface sGreen
+  endinstance
+  instance bezSeg2
+    surface sGreen
+  endinstance
+  instance bezSeg3
+    surface sGreen
+  endinstance
+  instance bezSeg4
+    surface sGreen
+  endinstance
+  instance bezSeg5
+    surface sGreen
+  endinstance
+  instance bezSeg6
+    surface sGreen
+  endinstance
+  instance bezSeg7
+    surface sGreen
+  endinstance
+  instance bezSeg8
+    surface sGreen
+  endinstance
+  instance bezSeg9
+    surface sGreen
+  endinstance
+  instance bezSeg10
+    surface sGreen
+  endinstance
+  instance bezSeg11
+    surface sGreen
+  endinstance
+  instance bezSeg12
+    surface sGreen
+  endinstance
+  instance bezSeg13
+    surface sGreen
+  endinstance
+  instance bezSeg14
+    surface sGreen
+  endinstance
+  instance bezSeg15
+    surface sGreen
+  endinstance
+
+endgroup   #gWorld
+
+
+group gScene
+  instance gWorld
+  endinstance
+endgroup
+
+
+#################### 
+# CAMERA
+#################### 
+
+camera cam
+  projection SLF_PARALLEL
+  frustum ( -9 -6 -100) (9 6 100)
+endcamera
+
+group gCamera
+  instance cam
+    id instCam
+    translate ( 0.0 0.0 1.0 )
+(*
+    lookat
+      eye ( 0.0 0.0 1.0 )
+      target ( 0.0 0.0 0.0 )
+      up ( 0.0 1.0 0.0 )
+    endlookat
+*)
+  endinstance
+endgroup
+
+#################### 
+# LIGHT
+#################### 
+
+light lite
+  type SLF_DIRECTIONAL
+#  type SLF_POINT
+endlight
+
+group gLight
+  instance lite
+    id instLite
+#    translate ( 0.0 1.0 1.0 )
+
+    lookat
+      eye ( 1.0 1.0 1.0 )
+      target ( 0.0 0.0 0.0 )
+      up ( 0.0 1.0 0.0 )
+    endlookat
+
+  endinstance
+endgroup
+
+light lite2
+  type SLF_AMBIENT
+  color (0.5 0.5 0.5)
+endlight
+
+group gLight2
+  instance lite2
+    id instLite2
+  endinstance
+endgroup
+
+####################
+# RENDER
+####################
+
+window WINDOW
+  origin (0.15 0.1)
+  size (0.75 0.5)
+endwindow
+
+viewport VIEWPORT WINDOW
+  origin ( 0.0 0.0 )
+  size ( 1.0 1.0 )
+endviewport
+
+render VIEWPORT gCamera.instCam.cam gScene
+  light gLight.instLite.lite
+  light gLight2.instLite2.lite2
+endrender
+
+######################

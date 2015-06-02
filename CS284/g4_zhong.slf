@@ -1,0 +1,754 @@
+### Adjustable Y-connector for Genus-3 Surface
+### CHS 2003-10-1
+###########################################
+
+tclinit {
+  package require slideui
+}
+
+
+tclinit { 
+  toplevel .slfWindow.ui
+  CreateSLIDESubdivisionObject oSubdivision
+  set widget [CreateSLIDESubdivisionUI .slfWindow.ui oSubdivision]
+  pack $widget
+}
+
+
+tclinit {
+
+  package require slideui
+  
+
+  proc CreateParamObject { name } {
+    set this $name
+    global $this
+
+    # v0 -- VARIABLE
+    set [subst $this](v0) 7.0
+    set [subst $this](v0_min) 6.1
+    set [subst $this](v0_max) 10.0
+    set [subst $this](v0_resolution) 0.05
+
+    # v1 -- VARIABLE
+    set [subst $this](v1) 7.5
+    set [subst $this](v1_min) 6.0
+    set [subst $this](v1_max) 12.0
+    set [subst $this](v1_resolution) 0.05
+
+    # v2 -- VARIABLE
+    set [subst $this](v2) 5.5
+    set [subst $this](v2_min) 2.1
+    set [subst $this](v2_max) 9.0
+    set [subst $this](v2_resolution) 0.05
+
+    # v3 -- VARIABLE
+    set [subst $this](v3) 1.0
+    set [subst $this](v3_min) 0.1
+    set [subst $this](v3_max) 2.0
+    set [subst $this](v3_resolution) 0.02
+
+    # v4 -- VARIABLE
+    set [subst $this](v4) 1.0
+    set [subst $this](v4_min) 0.1
+    set [subst $this](v4_max) 2.0
+    set [subst $this](v4_resolution) 0.02
+
+    # v5 -- VARIABLE
+    set [subst $this](v5) 1.0
+    set [subst $this](v5_min) 0.1
+    set [subst $this](v5_max) 2.0
+    set [subst $this](v5_resolution) 0.02
+
+    # v6 -- VARIABLE
+    set [subst $this](v6) 0.7
+    set [subst $this](v6_min) 0.1
+    set [subst $this](v6_max) 2.0
+    set [subst $this](v6_resolution) 0.02
+
+    # v7 -- VARIABLE
+    set [subst $this](v7) 0.90
+    set [subst $this](v7_min) 0.2
+    set [subst $this](v7_max) 1.3
+    set [subst $this](v7_resolution) 0.01
+
+    # v8 -- VARIABLE
+    set [subst $this](v8) 1.0
+    set [subst $this](v8_min) 0.1
+    set [subst $this](v8_max) 2.0
+    set [subst $this](v8_resolution) 0.02
+
+    ######################################################
+
+    # w0 -- VARIABLE
+    set [subst $this](w0) 3.5
+    set [subst $this](w0_min) 2.1
+    set [subst $this](w0_max) 4.0
+    set [subst $this](w0_resolution) 0.05
+
+    # w1 -- VARIABLE
+    set [subst $this](w1) 4.0
+    set [subst $this](w1_min) 2.5
+    set [subst $this](w1_max) 5.5
+    set [subst $this](w1_resolution) 0.05
+
+    # w2 -- VARIABLE
+    set [subst $this](w2) 3.5
+    set [subst $this](w2_min) 2.1
+    set [subst $this](w2_max) 6.0
+    set [subst $this](w2_resolution) 0.05
+
+    # w3 -- VARIABLE
+#    set [subst $this](w3) 0.5
+#    set [subst $this](w3_min) 0.1
+#    set [subst $this](w3_max) 1.0
+#    set [subst $this](w3_resolution) 0.02
+
+    # w4 -- VARIABLE
+    set [subst $this](w4) 1.0
+    set [subst $this](w4_min) 0.1
+    set [subst $this](w4_max) 2.0
+    set [subst $this](w4_resolution) 0.02
+
+    # w5 -- VARIABLE
+    set [subst $this](w5) 1.0
+    set [subst $this](w5_min) 0.1
+    set [subst $this](w5_max) 2.0
+    set [subst $this](w5_resolution) 0.02
+
+    # w6 -- VARIABLE
+    set [subst $this](w6) 1.0
+    set [subst $this](w6_min) 0.1
+    set [subst $this](w6_max) 2.0
+    set [subst $this](w6_resolution) 0.02
+
+    # w7 -- VARIABLE
+    set [subst $this](w7) 0.7
+    set [subst $this](w7_min) 0.2
+    set [subst $this](w7_max) 1.3
+    set [subst $this](w7_resolution) 0.01
+
+    # w8 -- VARIABLE
+    set [subst $this](w8) 1.0
+    set [subst $this](w8_min) 0.1
+    set [subst $this](w8_max) 2.0
+    set [subst $this](w8_resolution) 0.02
+
+  }
+
+   proc CreateParamUI { parent name } {
+    set root $parent.f$name
+    set this $name
+
+    global $this
+    frame $root
+
+    ## SLIDER Frame
+    frame $root.fScales
+
+    ##################################################
+    # SLIDER Left Frame
+    frame $root.fScales.fScalesLeft
+    
+    ## v0 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesLeft s_v0 \
+            [subst $this](v0) "v0: outter head dist" \
+            [subst $[subst $this](v0_min)] \
+            [subst $[subst $this](v0_max)] \
+            [subst $[subst $this](v0_resolution)]]
+    pack $widget -side top -fill x
+
+    ## v1 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesLeft s_v1 \
+            [subst $this](v1) "v1: outter corn dist" \
+            [subst $[subst $this](v1_min)] \
+            [subst $[subst $this](v1_max)] \
+            [subst $[subst $this](v1_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## v2 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesLeft s_v2 \
+            [subst $this](v2) "v2: outter side dist" \
+            [subst $[subst $this](v2_min)] \
+            [subst $[subst $this](v2_max)] \
+            [subst $[subst $this](v2_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## v3 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesLeft s_v3 \
+            [subst $this](v3) "v3: center size" \
+            [subst $[subst $this](v3_min)] \
+            [subst $[subst $this](v3_max)] \
+            [subst $[subst $this](v3_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## v4 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesLeft s_v4 \
+            [subst $this](v4) "v4: outter head diam" \
+            [subst $[subst $this](v4_min)] \
+            [subst $[subst $this](v4_max)] \
+            [subst $[subst $this](v4_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## v5 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesLeft s_v5 \
+            [subst $this](v5) "v5: outter corn diam" \
+            [subst $[subst $this](v5_min)] \
+            [subst $[subst $this](v5_max)] \
+            [subst $[subst $this](v5_resolution)]]
+    pack $widget -side top -fill x
+
+    ## v6 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesLeft s_v6 \
+            [subst $this](v6) "v6: outter side diam" \
+            [subst $[subst $this](v6_min)] \
+            [subst $[subst $this](v6_max)] \
+            [subst $[subst $this](v6_resolution)]]
+    pack $widget -side top -fill x
+
+    ## v7 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesLeft s_v7 \
+            [subst $this](v7) "v7: outter corn angle" \
+            [subst $[subst $this](v7_min)] \
+            [subst $[subst $this](v7_max)] \
+            [subst $[subst $this](v7_resolution)]]
+    pack $widget -side top -fill x
+
+    ## v8 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesLeft s_v8 \
+            [subst $this](v8) "v8: outter thickness" \
+            [subst $[subst $this](v8_min)] \
+            [subst $[subst $this](v8_max)] \
+            [subst $[subst $this](v8_resolution)]]
+    pack $widget -side top -fill x
+
+    ##################################################
+    # SLIDER Right Frame
+    frame $root.fScales.fScalesRight
+
+    ## w0 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesRight s_w0 \
+            [subst $this](w0) "w0: inner head dist" \
+            [subst $[subst $this](w0_min)] \
+            [subst $[subst $this](w0_max)] \
+            [subst $[subst $this](w0_resolution)]]
+    pack $widget -side top -fill x
+
+    ## w1 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesRight s_w1 \
+            [subst $this](w1) "w1: inner corn dist" \
+            [subst $[subst $this](w1_min)] \
+            [subst $[subst $this](w1_max)] \
+            [subst $[subst $this](w1_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## w2 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesRight s_w2 \
+            [subst $this](w2) "w2: inner side dist" \
+            [subst $[subst $this](w2_min)] \
+            [subst $[subst $this](w2_max)] \
+            [subst $[subst $this](w2_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## w3 -- SLIDER
+#    set widget [CreateScale $root.fScales.fScalesRight s_w3 \
+#            [subst $this](w3) "w3: xxxxxxxxxx" \
+#            [subst $[subst $this](w3_min)] \
+#            [subst $[subst $this](w3_max)] \
+#            [subst $[subst $this](w3_resolution)]]
+#    pack $widget -side top -fill x
+    
+    ## w4 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesRight s_w4 \
+            [subst $this](w4) "w4: inner head diam" \
+            [subst $[subst $this](w4_min)] \
+            [subst $[subst $this](w4_max)] \
+            [subst $[subst $this](w4_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## w5 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesRight s_w5 \
+            [subst $this](w5) "w5: inner corn diam" \
+            [subst $[subst $this](w5_min)] \
+            [subst $[subst $this](w5_max)] \
+            [subst $[subst $this](w5_resolution)]]
+    pack $widget -side top -fill x
+
+    ## w6 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesRight s_w6 \
+            [subst $this](w6) "w6: inner side diam" \
+            [subst $[subst $this](w6_min)] \
+            [subst $[subst $this](w6_max)] \
+            [subst $[subst $this](w6_resolution)]]
+    pack $widget -side top -fill x
+
+    ## w7 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesRight s_w7 \
+            [subst $this](w7) "w7: inner corn angle" \
+            [subst $[subst $this](w7_min)] \
+            [subst $[subst $this](w7_max)] \
+            [subst $[subst $this](w7_resolution)]]
+    pack $widget -side top -fill x
+
+    ## w8 -- SLIDER
+    set widget [CreateScale $root.fScales.fScalesRight s_w8 \
+            [subst $this](w8) "w8: inner thickness" \
+            [subst $[subst $this](w8_min)] \
+            [subst $[subst $this](w8_max)] \
+            [subst $[subst $this](w8_resolution)]]
+    pack $widget -side top -fill x
+
+
+    pack $root.fScales.fScalesLeft $root.fScales.fScalesRight -side left -fill y
+
+    pack $root.fScales -side top -fill x
+
+    return $root
+  }
+
+  toplevel .slfWindow.param
+  wm geometry .slfWindow.param +0+0
+  CreateParamObject param
+  set widget [CreateParamUI .slfWindow.param param]
+  pack $widget
+
+  puts "created paramUI"
+}
+
+surface RED color ( 1 0 0 ) endsurface
+surface YEL color ( 1 1 0 ) endsurface
+surface GRN color ( 0 1 0 ) endsurface
+surface CYN color ( 0 0 1 ) endsurface
+surface BLU color ( 0 0 1 ) endsurface
+surface MAG color ( 1 0 1 ) endsurface
+surface WHT color ( 1 1 1 ) endsurface
+
+
+#######################################################
+
+#outer and inner tips
+point XYT  ( {expr  $param(v0)} {expr  $param(v0)} {expr -$param(v0)} ) endpoint
+point XY1T ( {expr 1 - $param(v1)} {expr 1 - $param(v1)} {expr $param(v1) - 1}) endpoint
+
+#shoulder points
+point XYTs ( {expr $param(v0) + $param(v4)} {expr $param(v0) - $param(v4)} {expr $param(v4) - $param(v0)}) endpoint
+point ZTs (  {expr $param(v0) - $param(v4)} {expr -$param(v4) + $param(v0)} {expr -$param(v0) - $param(v4)}) endpoint
+
+#armpit points
+point XYyT ( {expr 1 + $param(v3)} {expr 1 - $param(v2)} {expr -$param(v3) - 1}) endpoint
+point XYzT ( {expr 1 + $param(v3)} {expr 1 + $param(v3)} {expr $param(v2) - 1}) endpoint
+
+#mid-arm joint
+point XT1 (  {expr 1 + $param(v6) + $param(v5)} 0 0) endpoint
+point XT2 (  {expr 1 + $param(v6)} {expr $param(v5) / sqrt(2)} {expr $param(v5) / sqrt(2)}) endpoint
+point XT3 (  {expr 1 + $param(v6) - $param(v5)} 0 0) endpoint
+point XT4 (  {expr 1 + $param(v6)} {expr -$param(v5) / sqrt(2)} {expr -$param(v5) / sqrt(2)}) endpoint
+
+
+face q1 (XYyT XYTs XT1 XT4) endface
+face q3 (XYTs XYzT XT2 XT1) endface
+face q5 (XYzT XY1T XT3 XT2) endface
+face q7 (XYyT XT4 XT3 XY1T) endface
+face qts (XYTs XYyT ZTs XYT ) endface
+
+
+object halfArm (q1 q3 q5 q7 qts)
+	solid SLF_SOLID
+	shading SLF_FLAT
+endobject
+
+
+##########################
+##########################
+
+
+# outter head 4 points
+point ahead0 ( 0 {expr $param(v0) - $param(v4)} {expr -$param(v8)} ) endpoint
+point ahead1 ( 0 {expr $param(v0) - $param(v4)} {expr  $param(v8)} ) endpoint
+point ahead2 ( 0 {expr $param(v0) + $param(v4)} {expr  $param(v8)} ) endpoint
+point ahead3 ( 0 {expr $param(v0) + $param(v4)} {expr -$param(v8)} ) endpoint
+
+# outter corn 4 points
+point acorn0 ( {expr ($param(v1) - $param(v5)) * cos($param(v7))} {expr ($param(v1) - $param(v5)) * sin($param(v7))} {expr -$param(v8)}) endpoint
+point acorn1 ( {expr ($param(v1) - $param(v5)) * cos($param(v7))} {expr ($param(v1) - $param(v5)) * sin($param(v7))} {expr  $param(v8)}) endpoint
+point acorn2 ( {expr ($param(v1) + $param(v5)) * cos($param(v7))} {expr ($param(v1) + $param(v5)) * sin($param(v7))} {expr  $param(v8)}) endpoint
+point acorn3 ( {expr ($param(v1) + $param(v5)) * cos($param(v7))} {expr ($param(v1) + $param(v5)) * sin($param(v7))} {expr -$param(v8)}) endpoint
+
+# outter tail 8 points
+point atail0 ( {expr $param(v2) - $param(v6)} {expr  $param(v6)} {expr -$param(v8)} ) endpoint
+point atail1 ( {expr $param(v2) - $param(v6)} {expr  $param(v6)} {expr  $param(v8)} ) endpoint
+point atail2 ( {expr $param(v2) + $param(v6)} {expr  $param(v6)} {expr  $param(v8)} ) endpoint
+point atail3 ( {expr $param(v2) + $param(v6)} {expr  $param(v6)} {expr -$param(v8)} ) endpoint
+point atail4 ( {expr $param(v2) - $param(v6)} {expr -$param(v6)} {expr -$param(v8)} ) endpoint
+point atail5 ( {expr $param(v2) - $param(v6)} {expr -$param(v6)} {expr  $param(v8)} ) endpoint
+point atail6 ( {expr $param(v2) + $param(v6)} {expr -$param(v6)} {expr  $param(v8)} ) endpoint
+point atail7 ( {expr $param(v2) + $param(v6)} {expr -$param(v6)} {expr -$param(v8)} ) endpoint
+
+# cent 8 points
+point ccent0 ( {expr -$param(v3)} {expr  $param(v3)} {expr -$param(v3)} ) endpoint
+point ccent1 ( {expr -$param(v3)} {expr  $param(v3)} {expr  $param(v3)} ) endpoint
+point ccent2 ( {expr  $param(v3)} {expr  $param(v3)} {expr  $param(v3)} ) endpoint
+point ccent3 ( {expr  $param(v3)} {expr  $param(v3)} {expr -$param(v3)} ) endpoint
+point ccent4 ( {expr -$param(v3)} {expr -$param(v3)} {expr -$param(v3)} ) endpoint
+point ccent5 ( {expr -$param(v3)} {expr -$param(v3)} {expr  $param(v3)} ) endpoint
+point ccent6 ( {expr  $param(v3)} {expr -$param(v3)} {expr  $param(v3)} ) endpoint
+point ccent7 ( {expr  $param(v3)} {expr -$param(v3)} {expr -$param(v3)} ) endpoint
+
+
+##########################
+##########################
+
+# outter head 4 faces
+face mhead0 (ahead0 acorn0 acorn1 ahead1) endface
+face mhead1 (ahead1 acorn1 acorn2 ahead2) endface
+face mhead2 (ahead2 acorn2 acorn3 ahead3) endface
+face mhead3 (ahead3 acorn3 acorn0 ahead0) endface
+
+# outter body 4 faces
+face mbody0 (acorn0 atail0 atail1 acorn1) endface
+face mbody1 (acorn1 atail1 atail2 acorn2) endface
+face mbody2 (acorn2 atail2 atail3 acorn3) endface
+face mbody3 (acorn3 atail3 atail0 acorn0) endface
+
+# outter tail 8 faces
+face mtail0 (ccent3 ccent2 atail1 atail0) endface
+face mtail1 (ccent2 ccent6 atail5 atail1) endface
+face mtail2 (ccent6 ccent7 atail4 atail5) endface
+face mtail3 (ccent7 ccent3 atail0 atail4) endface
+face mtail4 (ccent0 ccent1 ccent2 ccent3) endface
+face mtail5 (atail0 atail3 atail7 atail4) endface
+face mtail6 (atail3 atail2 atail6 atail7) endface
+face mtail7 (atail2 atail1 atail5 atail6) endface
+
+object mheadArm (mhead0 mhead1 mhead2 mhead3)
+	solid SLF_SOLID
+	shading SLF_FLAT
+endobject
+
+object mbodyArm (mbody0 mbody1 mbody2 mbody3)
+	solid SLF_SOLID
+	shading SLF_FLAT
+endobject
+
+object mtailArm (mtail0 mtail1 mtail2 mtail3 mtail4 mtail5 mtail6 mtail7)
+	solid SLF_SOLID
+	shading SLF_FLAT
+endobject
+
+
+##########################
+##########################
+
+group gHead
+  instance mheadArm
+  endinstance
+  instance mheadArm
+    rotate (1 0 0) (180)
+  endinstance
+  instance mheadArm
+    rotate (0 0 1) (180)
+  endinstance
+  instance mheadArm
+    rotate (0 1 0) (180)
+  endinstance
+endgroup
+
+group gBody
+  instance mbodyArm
+  endinstance
+  instance mbodyArm
+    rotate (1 0 0) (180)
+  endinstance
+  instance mbodyArm
+    rotate (0 0 1) (180)
+  endinstance
+  instance mbodyArm
+    rotate (0 1 0) (180)
+  endinstance
+endgroup
+
+group gTail
+  instance mtailArm
+  endinstance
+  instance mtailArm
+    rotate (0 0 1) (180)
+  endinstance
+endgroup
+
+group outterFour
+  instance gHead
+  endinstance
+  instance gBody
+  endinstance
+  instance gTail
+  endinstance
+endgroup
+
+##########################
+##########################
+
+##########################
+##########################
+
+
+# inner head 4 points
+point bhead0 ( 0 {expr $param(w0) - $param(w4)} {expr -$param(w8)} ) endpoint
+point bhead1 ( 0 {expr $param(w0) - $param(w4)} {expr  $param(w8)} ) endpoint
+point bhead2 ( 0 {expr $param(w0) + $param(w4)} {expr  $param(w8)} ) endpoint
+point bhead3 ( 0 {expr $param(w0) + $param(w4)} {expr -$param(w8)} ) endpoint
+
+# inner corn 4 points
+point bcorn0 ( {expr ($param(w1) - $param(w5)) * cos($param(w7))} {expr ($param(w1) - $param(w5)) * sin($param(w7))} {expr -$param(w8)}) endpoint
+point bcorn1 ( {expr ($param(w1) - $param(w5)) * cos($param(w7))} {expr ($param(w1) - $param(w5)) * sin($param(w7))} {expr  $param(w8)}) endpoint
+point bcorn2 ( {expr ($param(w1) + $param(w5)) * cos($param(w7))} {expr ($param(w1) + $param(w5)) * sin($param(w7))} {expr  $param(w8)}) endpoint
+point bcorn3 ( {expr ($param(w1) + $param(w5)) * cos($param(w7))} {expr ($param(w1) + $param(w5)) * sin($param(w7))} {expr -$param(w8)}) endpoint
+
+# inner tail 8 points
+point btail0 ( {expr $param(w2) - $param(w6)} {expr  $param(w6)} {expr -$param(w8)} ) endpoint
+point btail1 ( {expr $param(w2) - $param(w6)} {expr  $param(w6)} {expr  $param(w8)} ) endpoint
+point btail2 ( {expr $param(w2) + $param(w6)} {expr  $param(w6)} {expr  $param(w8)} ) endpoint
+point btail3 ( {expr $param(w2) + $param(w6)} {expr  $param(w6)} {expr -$param(w8)} ) endpoint
+point btail4 ( {expr $param(w2) - $param(w6)} {expr -$param(w6)} {expr -$param(w8)} ) endpoint
+point btail5 ( {expr $param(w2) - $param(w6)} {expr -$param(w6)} {expr  $param(w8)} ) endpoint
+point btail6 ( {expr $param(w2) + $param(w6)} {expr -$param(w6)} {expr  $param(w8)} ) endpoint
+point btail7 ( {expr $param(w2) + $param(w6)} {expr -$param(w6)} {expr -$param(w8)} ) endpoint
+
+##########################
+##########################
+
+# inner head 4 faces
+face nhead0 (bhead0 bcorn0 bcorn1 bhead1) endface
+face nhead1 (bhead1 bcorn1 bcorn2 bhead2) endface
+face nhead2 (bhead2 bcorn2 bcorn3 bhead3) endface
+face nhead3 (bhead3 bcorn3 bcorn0 bhead0) endface
+
+# inner body 4 faces
+face nbody0 (bcorn0 btail0 btail1 bcorn1) endface
+face nbody1 (bcorn1 btail1 btail2 bcorn2) endface
+face nbody2 (bcorn2 btail2 btail3 bcorn3) endface
+face nbody3 (bcorn3 btail3 btail0 bcorn0) endface
+
+# inner tail 8 faces
+
+face ntail0 (ccent3 ccent2 btail1 btail0) endface
+face ntail1 (ccent2 ccent6 btail5 btail1) endface
+face ntail2 (ccent6 ccent7 btail4 btail5) endface
+face ntail3 (ccent7 ccent3 btail0 btail4) endface
+#face mtail4 (ccent3 ccent7 ccent4 ccent0) endface
+face ntail5 (btail0 btail3 btail7 btail4) endface
+face ntail6 (btail3 btail2 btail6 btail7) endface
+face ntail7 (btail2 btail1 btail5 btail6) endface
+
+object nheadArm (nhead0 nhead1 nhead2 nhead3)
+	solid SLF_SOLID
+	shading SLF_FLAT
+endobject
+
+object nbodyArm (nbody0 nbody1 nbody2 nbody3)
+	solid SLF_SOLID
+	shading SLF_FLAT
+endobject
+
+object ntailArm (ntail0 ntail1 ntail2 ntail3 ntail5 ntail6 ntail7)
+	solid SLF_SOLID
+	shading SLF_FLAT
+endobject
+
+
+##########################
+##########################
+
+group hHead
+  instance nheadArm
+  endinstance
+  instance nheadArm
+    rotate (1 0 0) (180)
+  endinstance
+  instance nheadArm
+    rotate (0 0 1) (180)
+  endinstance
+  instance nheadArm
+    rotate (0 1 0) (180)
+  endinstance
+endgroup
+
+group hBody
+  instance nbodyArm
+  endinstance
+  instance nbodyArm
+    rotate (1 0 0) (180)
+  endinstance
+  instance nbodyArm
+    rotate (0 0 1) (180)
+  endinstance
+  instance nbodyArm
+    rotate (0 1 0) (180)
+  endinstance
+endgroup
+
+group hTail
+  instance ntailArm
+  endinstance
+  instance ntailArm
+    rotate (0 1 0) (180)
+  endinstance
+endgroup
+
+group innerFour
+  instance hHead
+  endinstance
+  instance hBody
+  endinstance
+  instance hTail
+  endinstance
+endgroup
+
+group genusFour
+  instance outterFour
+  endinstance
+  instance innerFour
+    rotate (0 1 0) (90)
+  endinstance
+endgroup
+
+##########################
+##########################
+
+
+##################################################
+
+group tetraCorner
+  instance halfArm
+  endinstance
+  instance halfArm
+    rotate (1 1 -1) (120)
+  endinstance
+  instance halfArm
+    rotate (1 1 -1) (-120)
+  endinstance
+endgroup
+
+group gWholeMesh
+  instance tetraCorner
+  endinstance
+  instance tetraCorner
+    rotate (1 0 0) (180)
+  endinstance
+  instance tetraCorner
+    rotate (0 1 0) (180)
+  endinstance
+  instance tetraCorner
+    rotate (0 0 1) (180)
+  endinstance
+endgroup
+
+################# SUBDIVISION ########################################
+
+subdivision oSubdivSurf
+
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)+4  }
+  errormetric {expr $oSubdivision(errormetric)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawcurrent {expr $oSubdivision(drawcurrent)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+  vknots {expr $oSubdivision(a)}
+  vorder {expr $oSubdivision(b)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+##  instance gWholeMesh
+  instance genusFour
+    surface GRN
+  endinstance
+
+endsubdivision
+
+#######################################################
+
+group assembly
+  ##instance gWholeMesh
+  ##instance genusFour
+  instance oSubdivSurf
+    surface RED
+    scale(0.1 0.1 0.1)
+    rotate(1 0 0) (15)
+    rotate(0 1 0) (35)
+  endinstance 
+endgroup
+
+#####   include "viewing.slf"
+# A generic setup for viewing SLF objects
+##########################################
+
+light amb
+  type SLF_AMBIENT
+  color (0.2 0.2 0.2)
+endlight
+
+light sun
+  type SLF_DIRECTIONAL
+  color (0.8 0.8 0.8)
+endlight
+
+light anti_sun
+  type SLF_DIRECTIONAL
+  color (0.4 0.4 0.4)
+endlight
+
+group world
+  instance assembly   
+    scale ( 0.1 0.1 0.1 )
+  endinstance
+
+  instance amb
+    id main_amb
+  endinstance
+  instance sun
+    id front_sun
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+  instance anti_sun
+    id back_sun
+    rotate (1 0 0) (180)
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+endgroup
+
+camera cam
+   projection SLF_PERSPECTIVE
+  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 -0.01)
+endcamera
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0.0 0.0 1 )
+  endinstance
+endgroup
+
+window Window
+  background (0.3 0.6 0.3)
+endwindow
+
+viewport vp Window
+endviewport
+
+render vp gCam.iCam.cam world 
+  light world.front_sun.sun
+  light world.back_sun.anti_sun
+  light world.main_amb.amb
+endrender
+

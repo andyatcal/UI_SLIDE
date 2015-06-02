@@ -1,0 +1,263 @@
+### SweepDemo1.slf
+#   Show various parameters in SLIDE sweeps
+###########################################
+
+tclinit {
+  set winName .slfWINDOW
+
+  source SLIDEUI.tcl
+  source MATH.tcl
+
+  proc CreateSweepUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set minTorsion [CreateScale $name $root minTorsion "minTorsion" 1 0 1 1 1 horizontal]
+    set drawSweep [CreateScale $name $root drawSweep "drawSweep" 1 0 1 1 1 horizontal]
+    set drawControls [CreateScale $name $root drawControls "drawControls" 1 0 1 1 1 horizontal]	
+    set drawPath [CreateScale $name $root drawPath "drawPath" 1 0 1 1 1 horizontal]
+
+    pack $minTorsion $drawSweep $drawPath $drawControls -side top -fill x
+  }
+
+ proc CreateCSUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+    set ec [CreateScale $name $root ec "end caps" 1 0 1 1 1 horizontal]
+    set radius [CreateScale $name $root radius "radius" 0.3 0.01 1 0.01 1 horizontal]
+    set slices [CreateScale $name $root slices "slices" 8 1 20 1 1 horizontal]
+    set or [CreateScale $name $root or "or" 0 0 1 1 1 horizontal]
+
+    pack $ec $or $radius $slices -side top -fill x
+  }
+
+  proc CreateStarUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set sx [CreateScale $name $root sx "sx" 1 1 10 0.1 1 horizontal]
+    set sy [CreateScale $name $root sy "sy" 1 1 10 0.1 1 horizontal]
+    set sz [CreateScale $name $root sz "sz" 1 1 10 0.1 1 horizontal]
+
+    set tx [CreateScale $name $root tx "tx" 0 -2 2 0.1 1 horizontal]
+    set ty [CreateScale $name $root ty "ty" 0 -2 2 0.1 1 horizontal]
+    set tz [CreateScale $name $root tz "tz" 0 -2 2 0.1 1 horizontal]
+
+    set rx [CreateScale $name $root rx "rx" 0 -360 360 1 1 horizontal]
+    set ry [CreateScale $name $root ry "ry" 0 -360 360 1 1 horizontal]
+    set rz [CreateScale $name $root rz "rz" 0 -360 360 1 1 horizontal]
+
+    pack $sx $sy $sz $tx $ty $tz $rx $ry $rz -side top -fill x
+  }
+
+
+  CreateSweepUI $winName sw
+  CreateCSUI $winName cs
+  CreateStarUI $winName star
+}
+
+
+#################### 
+# SURFACES
+#################### 
+surface sGrey
+  color (0.25 0.25 0.25)
+endsurface
+
+surface sBlue
+  color (0.25 0.25 0.8)
+endsurface
+
+surface sRed
+  color (0.8 0.25 0.8)
+endsurface
+
+surface sYellow
+  color (0.8 0.8 0.25)
+endsurface
+
+####################
+# Objects
+####################
+
+tclinit {
+
+  proc CreateHelix { turns } {
+    global SLF_PI
+
+    set slices [expr $turns * 10]
+    set theta 0
+    set thetaDelta [expr $turns*2*$SLF_PI/$slices]
+    set zDelta 0.4
+    set z [expr -$slices*$zDelta/2.0]
+
+    set pts ""
+    for {set i 1} {$i <= $slices} {incr i} {
+
+      set name p[subst $i]
+      set pts [concat $pts "$name"]
+
+      set x [expr cos($theta)]
+      set y [expr sin($theta)]
+
+      eval "slide create point $name {$x $y $z}"
+
+      set theta [expr $theta+$thetaDelta] 
+      set z [expr $z+$zDelta]
+    }
+    #slide create beziercurve bz -controlpointlist $pts -slices $slices -drawcontrols 1
+     slide create beziercurve bz -controlpointlist $pts -slices $slices -drawcontrols {expr $sw_drawControls}
+  }
+
+   CreateHelix 2
+}
+
+crosssection csCircle
+  type circle
+  radius {expr $cs_radius}
+  slices {expr $cs_slices}
+endcrosssection
+
+sweep sw
+  path bz
+    minimizetorsion {expr $sw_minTorsion}
+  endpath
+
+  crosssection csCircle
+    surface sBlue
+    orientation {expr $cs_or}
+    endcap {expr $cs_ec}
+    begincap {expr $cs_ec}
+
+    transform
+      scale ({expr $star_sx} {expr $star_sy} {expr $star_sz})
+      translate ({expr $star_tx} {expr $star_ty} {expr $star_tz})
+      rotate (1 0 0) ({expr $star_rx})
+      rotate (0 1 0) ({expr $star_ry})
+      rotate (0 0 1) ({expr $star_rz})
+    endtransform
+  endcrosssection
+
+  drawpath {expr $sw_drawPath}
+  drawsweep {expr $sw_drawSweep}
+endsweep
+
+
+####################
+# World
+####################
+
+group gWorld
+  instance sw
+  endinstance
+endgroup
+
+group gScene
+  instance gWorld
+    rotate (0 1 0) (-80)
+    scale (0.2 0.2 0.2)
+  endinstance
+endgroup
+
+
+#################### 
+# CAMERA
+#################### 
+
+camera cam
+  projection SLF_PARALLEL
+  frustum ( -1 -1 -100) (1 1 100)
+endcamera
+
+group gCamera
+  instance cam
+    id instCam
+    translate ( 0.0 0.0 1.0 )
+(*
+    lookat
+      eye ( 0.0 0.0 1.0 )
+      target ( 0.0 0.0 0.0 )
+      up ( 0.0 1.0 0.0 )
+    endlookat
+*)
+  endinstance
+endgroup
+
+#################### 
+# LIGHT
+#################### 
+
+light lite
+  type SLF_DIRECTIONAL
+#  type SLF_POINT
+endlight
+
+group gLight
+  instance lite
+    id instLite
+#    translate ( 0.0 1.0 1.0 )
+
+    lookat
+      eye ( 1.0 1.0 1.0 )
+      target ( 0.0 0.0 0.0 )
+      up ( 0.0 1.0 0.0 )
+    endlookat
+
+  endinstance
+endgroup
+
+light lite2
+  type SLF_AMBIENT
+  color (0.5 0.5 0.5)
+endlight
+
+group gLight2
+  instance lite2
+    id instLite2
+  endinstance
+endgroup
+
+####################
+# RENDER
+####################
+
+window WINDOW
+endwindow
+
+viewport VIEWPORT WINDOW
+  origin ( 0.0 0.0 )
+  size ( 1.0 1.0 )
+endviewport
+
+render VIEWPORT gCamera.instCam.cam gScene
+  light gLight.instLite.lite
+  light gLight2.instLite2.lite2
+endrender
+

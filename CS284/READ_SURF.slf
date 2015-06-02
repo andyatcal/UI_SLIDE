@@ -1,0 +1,203 @@
+##################################################
+#### READ_SURF.slf - read in an STL file (uptile.stl)
+
+tclinit { 
+  package require slideui
+}
+
+(*
+  toplevel .slfWindow.ui
+  CreateSLIDEOffsetObject oOffset
+  set widget [CreateSLIDEOffsetUI .slfWindow.ui oOffset]
+  pack $widget
+*)
+
+
+tclinit {
+  CreateSTLObject SURF uptile.stl  
+}
+
+### Create Sliders
+tclinit { 
+  set winName .slfWindow
+
+  toplevel .slfWindow.gRoot
+  CreateSLIDEObjectObject gRoot
+  set widget [CreateSLIDEGroupUI .slfWindow.gRoot gRoot]
+  pack $widget
+}
+ 
+
+######## THE UI ################################
+
+tclinit {
+
+  proc CreateRotObject { name } {
+    set this $name
+    global $this
+
+    # x
+    set [subst $this](x) 58.3
+    set [subst $this](x_min) 0
+    set [subst $this](x_max) 90
+    set [subst $this](x_resolution) 0.1
+    # y
+    set [subst $this](y) -18.0
+    set [subst $this](y_min) -90
+    set [subst $this](y_max) 90
+    set [subst $this](y_resolution) 0.1
+    # z
+    set [subst $this](z) 0
+    set [subst $this](z_min) -90
+    set [subst $this](z_max) 90
+    set [subst $this](z_resolution) 0.1
+
+  }
+ 
+  proc CreateRotUI { parent name } {
+    set root $parent.f$name
+    set this $name
+    global $this
+
+    frame $root
+    ## Scales Frame
+    frame $root.fScales
+    
+    # x
+    set widget [CreateScale $root.fScales scalex \
+	    [subst $this](x) "x-rot" \
+	    [subst $[subst $this](x_min)] \
+	    [subst $[subst $this](x_max)] \
+	    [subst $[subst $this](x_resolution)]]
+    pack $widget -side top -fill x
+
+    # y
+    set widget [CreateScale $root.fScales scaley \
+	    [subst $this](y) "y-rot" \
+	    [subst $[subst $this](y_min)] \
+	    [subst $[subst $this](y_max)] \
+	    [subst $[subst $this](y_resolution)]]
+    pack $widget -side top -fill x
+
+    # z
+    set widget [CreateScale $root.fScales scalez \
+	    [subst $this](z) "z-rot" \
+	    [subst $[subst $this](z_min)] \
+	    [subst $[subst $this](z_max)] \
+	    [subst $[subst $this](z_resolution)]]
+    pack $widget -side top -fill x
+
+    pack $root.fScales -side top -fill x
+
+    return $root
+  }
+
+  toplevel .slfWindow.rot
+  CreateRotObject rot
+  set widget [CreateRotUI .slfWindow.rot rot]
+  pack $widget
+  puts "==> created RotationUI <=="
+}
+
+
+group gSurfMesh
+  instance oSURF
+    rotate(1 0 0)({expr $rot(x)})
+    rotate(0 1 0)({expr $rot(y)})
+    rotate(0 0 1)({expr $rot(z)})
+  endinstance
+endgroup
+
+
+##################################################
+# Offset
+(*
+offset oOffset
+  lod {expr $oOffset(lod)}
+  shading {expr $oOffset(shading)}
+
+  type {expr $oOffset(type)}
+
+  height {expr $oOffset(height)}
+  width {expr $oOffset(width)}
+  drawcontrols {expr $oOffset(drawcontrols)}
+
+  instance gSurfMesh
+    surface Y
+  endinstance
+  instance gSurfMesh
+    surface G
+    rotate(0 0 1)(180)
+  endinstance
+
+endoffset
+*)
+##################################################
+
+surface Y  color ( 1 1 0 ) endsurface
+surface R  color ( 1 0 0 ) endsurface
+
+## Assemble two tiles into one big one ############
+group gAssembly
+  instance gSurfMesh
+    surface Y
+  endinstance
+  instance gSurfMesh
+    surface R
+    rotate(0 0 1)(180)
+  endinstance
+endgroup
+
+group gRoot
+  ## shading {expr $oOffset(shading)}
+  ## instance oOffset
+  instance gAssembly
+    scale ( 0.1 0.1 0.1 )
+  endinstance
+endgroup
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0 0 1 )
+  endinstance
+endgroup
+
+camera cam
+  projection SLF_PERSPECTIVE
+  frustum ( -0.5 -0.5 -2 ) ( 0.5 0.5 -0.2 )
+endcamera
+
+light lAmbient
+  type SLF_AMBIENT
+  color ( 0.2 0.2 0.2 )
+endlight
+
+light lTop
+  type SLF_DIRECTIONAL
+  color ( 1.0 1.0 1.0 )
+endlight
+
+group gLight
+  instance lTop
+    id iTop
+    lookat
+      eye ( 0 0 0 )
+      target ( -1 -1 -1 )
+      up ( 0 1 0 )
+    endlookat
+    translate ( 1 1 1 )
+  endinstance
+endgroup
+
+render Viewport gCam.iCam.cam gRoot
+  light lAmbient
+  light gLight.iTop.lTop
+endrender
+
+viewport Viewport Window
+endviewport
+
+window Window
+  background ( 0.5 0.7 0.9 )
+endwindow

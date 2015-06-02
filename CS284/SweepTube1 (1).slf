@@ -1,0 +1,363 @@
+####################################################
+# SweepTube1.slf
+# Ellipse swept along B-spline approx of cirular arc
+# Sweep demo for cs285
+####################################################
+
+
+############### INITIALIZATIONS ####################
+
+###  Get some generic capabilities  ###
+tclinit { 
+  package require slideui
+
+  toplevel .slfWindow.uiOffset
+  CreateSLIDEOffsetObject oOffset
+  set widget [CreateSLIDEOffsetUI .slfWindow.uiOffset oOffset]
+  pack $widget
+}
+
+
+###  Display window  ###
+tclinit { 
+  toplevel .slfWindow.gRoot
+  CreateSLIDEObjectObject gRoot
+  set widget [CreateSLIDEGroupUI .slfWindow.gRoot gRoot]
+  pack $widget
+}
+ 
+
+###  PARAMETERIZED SWEEP UI  ###
+tclinit {
+
+  proc CreateParamObject { name } {
+    set this $name
+    global $this
+
+    # Ring-radius -- VARIABLE
+    set [subst $this](rradius) 2
+    set [subst $this](rradius_min) 1
+    set [subst $this](rradius_max) 5
+    set [subst $this](rradius_resolution) 0.01
+
+    # L-slices -- VARIABLE
+    set [subst $this](lslices) 20
+    set [subst $this](lslices_min) 12
+    set [subst $this](lslices_max) 100
+    set [subst $this](lslices_resolution) 1
+
+    # Swept-arc -- VARIABLE
+    set [subst $this](arc) 0.9
+    set [subst $this](arc_min) 0.5
+    set [subst $this](arc_max) 3.0
+    set [subst $this](arc_resolution) 0.1
+
+    # Tube-radius -- VARIABLE
+    set [subst $this](tradius) 0.5
+    set [subst $this](tradius_min) 0.1
+    set [subst $this](tradius_max) 0.9
+    set [subst $this](tradius_resolution) 0.01
+
+    # W-slices -- VARIABLE
+    set [subst $this](wslices) 5
+    set [subst $this](wslices_min) 4
+    set [subst $this](wslices_max) 20
+    set [subst $this](wslices_resolution) 1
+
+    # Excentricity -- VARIABLE
+    set [subst $this](exce) 0.9
+    set [subst $this](exce_min) 0.25
+    set [subst $this](exce_max) 4
+    set [subst $this](exce_resolution) 0.01
+ 
+    # azim -- VARIABLE
+    set [subst $this](azim) 0
+    set [subst $this](azim_min) -180
+    set [subst $this](azim_max) 180
+    set [subst $this](azim_resolution) 1
+
+    # twist -- VARIABLE
+    set [subst $this](twist) -45
+    set [subst $this](twist_min) -900
+    set [subst $this](twist_max) 900
+    set [subst $this](twist_resolution) 45
+
+    # closed -- VARIABLE
+    set [subst $this](closed) 0
+    set [subst $this](closed_min) 0
+    set [subst $this](closed_max) 1
+    set [subst $this](closed_resolution) 1
+
+    # minTorsion -- VARIABLE
+    set [subst $this](minTorsion) 1
+    set [subst $this](minTorsion_min) 0
+    set [subst $this](minTorsion_max) 1
+    set [subst $this](minTorsion_resolution) 1
+
+  }
+ 
+
+  proc CreateParamUI { parent name } {
+    set root $parent.f$name
+    set this $name
+
+    global $this
+    frame $root
+
+    ## SLIDER Frame
+    frame $root.fScales
+    
+    ## Ring-radius -- SLIDER
+    set widget [CreateScale $root.fScales s_rradius \
+	    [subst $this](rradius) "Ring-radius" \
+	    [subst $[subst $this](rradius_min)] \
+	    [subst $[subst $this](rradius_max)] \
+	    [subst $[subst $this](rradius_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## L-slices -- SLIDER
+    set widget [CreateScale $root.fScales s_lslices \
+	    [subst $this](lslices) "L-slices" \
+	    [subst $[subst $this](lslices_min)] \
+	    [subst $[subst $this](lslices_max)] \
+	    [subst $[subst $this](lslices_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## Swept-arc -- SLIDER
+    set widget [CreateScale $root.fScales s_arc \
+	    [subst $this](arc) "Swept-arc" \
+	    [subst $[subst $this](arc_min)] \
+	    [subst $[subst $this](arc_max)] \
+	    [subst $[subst $this](arc_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## Tube-radius -- SLIDER
+    set widget [CreateScale $root.fScales s_tradius \
+	    [subst $this](tradius) "Tube-radius" \
+	    [subst $[subst $this](tradius_min)] \
+	    [subst $[subst $this](tradius_max)] \
+	    [subst $[subst $this](tradius_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## Excentricity -- SLIDER
+    set widget [CreateScale $root.fScales s_exce \
+	    [subst $this](exce) "Excentricity" \
+	    [subst $[subst $this](exce_min)] \
+	    [subst $[subst $this](exce_max)] \
+	    [subst $[subst $this](exce_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## W-slices -- SLIDER
+    set widget [CreateScale $root.fScales s_wslices \
+	    [subst $this](wslices) "W-slices" \
+	    [subst $[subst $this](wslices_min)] \
+	    [subst $[subst $this](wslices_max)] \
+	    [subst $[subst $this](wslices_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## azim -- SLIDER
+    set widget [CreateScale $root.fScales s_azim \
+	    [subst $this](azim) "azim" \
+	    [subst $[subst $this](azim_min)] \
+	    [subst $[subst $this](azim_max)] \
+	    [subst $[subst $this](azim_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## twist -- SLIDER
+    set widget [CreateScale $root.fScales s_twist \
+	    [subst $this](twist) "twist" \
+	    [subst $[subst $this](twist_min)] \
+	    [subst $[subst $this](twist_max)] \
+	    [subst $[subst $this](twist_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## closed -- SLIDER
+    set widget [CreateScale $root.fScales s_closed \
+	    [subst $this](closed) "closed" \
+	    [subst $[subst $this](closed_min)] \
+	    [subst $[subst $this](closed_max)] \
+	    [subst $[subst $this](closed_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## minTorsion -- SLIDER
+    set widget [CreateScale $root.fScales s_minTorsion \
+	    [subst $this](i) "minTorsion" \
+	    [subst $[subst $this](minTorsion_min)] \
+	    [subst $[subst $this](minTorsion_max)] \
+	    [subst $[subst $this](minTorsion_resolution)]]
+    pack $widget -side top -fill x
+    
+
+    pack $root.fScales -side top -fill x
+
+    return $root
+  }
+
+
+  toplevel .slfWindow.param
+  CreateParamObject param
+  set widget [CreateParamUI .slfWindow.param param]
+  pack $widget
+
+  puts "created paramUI"
+}
+
+
+### SURFACES ###
+
+surface sRed  color (1 0.3 0.3) endsurface
+surface sGrn  color (0.2 1 0.2) endsurface
+surface sBlu  color (0.3 0.3 1) endsurface
+surface sYel  color (1 0.8 0) endsurface
+
+
+### Cross Section ###
+
+crosssection disc
+  type circle
+  radius {expr $param(tradius)}
+  slices {expr $param(wslices)}
+endcrosssection
+
+
+### Sweep Path ###
+
+point c6 (0 {expr $param(rradius)*sin(1.2*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(1.2*$SLF_PI*$param(arc))} ) endpoint
+point c5 (0 {expr $param(rradius)*sin(1.0*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(1.0*$SLF_PI*$param(arc))} ) endpoint
+point c4 (0 {expr $param(rradius)*sin(0.8*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.8*$SLF_PI*$param(arc))} ) endpoint
+point c3 (0 {expr $param(rradius)*sin(0.6*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.6*$SLF_PI*$param(arc))} ) endpoint
+point c2 (0 {expr $param(rradius)*sin(0.4*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.4*$SLF_PI*$param(arc))} ) endpoint
+point c1 (0 {expr $param(rradius)*sin(0.2*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.2*$SLF_PI*$param(arc))} ) endpoint
+point c0 (0 0  {expr $param(rradius)} ) endpoint
+point c_1 (0 {expr -$param(rradius)*sin(0.2*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.2*$SLF_PI*$param(arc))} ) endpoint
+point c_2 (0 {expr -$param(rradius)*sin(0.4*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.4*$SLF_PI*$param(arc))} ) endpoint
+point c_3 (0 {expr -$param(rradius)*sin(0.6*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.6*$SLF_PI*$param(arc))} ) endpoint
+point c_4 (0 {expr -$param(rradius)*sin(0.8*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(0.8*$SLF_PI*$param(arc))} ) endpoint
+point c_5 (0 {expr -$param(rradius)*sin(1.0*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(1.0*$SLF_PI*$param(arc))} ) endpoint
+point c_6 (0 {expr -$param(rradius)*sin(1.2*$SLF_PI*$param(arc))} {expr $param(rradius)*cos(1.2*$SLF_PI*$param(arc))} ) endpoint
+
+bsplinecurve arcseg
+  order 4
+  controlpointlist ( c_6 c_5 c_4 c_3 c_2 c_1 c0 c1 c2 c3 c4 c5 c6 )
+  slices {expr $param(lslices)}
+  #drawcontrols {expr $param(drawControls)}
+endbsplinecurve
+
+
+### Putting them together ###
+
+sweep tube
+  path arcseg
+    minimizetorsion {expr $param(minTorsion)}
+    azimuth {expr $param(azim)}
+    twist {expr $param(twist)}
+  endpath
+  crosssection disc
+    begincap 0
+    endcap 0
+    transform
+      scale( 1 {expr $param(exce)} 1 ) ## make elliptic
+    endtransform
+  endcrosssection
+  #solid SLF_HOLLOW
+  meshtype SLF_QUADRILATERALS
+endsweep
+
+
+#######################################################
+### Create a thick mesh along the facet edges #########
+
+offset oOffset
+  ## These are all provided by the uiOffset-menu
+  lod {expr $oOffset(lod)}
+  shading {expr $oOffset(shading)}
+  #type {expr $oOffset(type)}
+  type SLF_OFFSET_PERFORATED
+  drawcontrols {expr $oOffset(drawcontrols)}
+  height {expr $oOffset(height)}
+  width {expr $oOffset(width)}
+
+  instance tube
+  endinstance
+
+endoffset
+
+#######################################################
+
+
+### Scene Assembly ###
+
+group gScene
+  instance oOffset
+    surface sYel
+  endinstance
+endgroup
+
+
+#################### 
+# CAMERA
+#################### 
+
+camera cam
+  projection SLF_PARALLEL
+  frustum (-5 -5 -100) (5 5 100)
+endcamera
+
+group gCamera
+  instance cam
+    id instCam
+    translate ( 0.0 0.0 1 )
+  endinstance
+endgroup
+
+#################### 
+# LIGHT
+#################### 
+
+light lite
+  type SLF_DIRECTIONAL
+endlight
+
+group gLight
+  instance lite
+    id instLite
+
+    lookat
+      eye ( 1.0 1.0 1.0 )
+      target ( 0.0 0.0 0.0 )
+      up ( 0.0 1.0 0.0 )
+    endlookat
+
+  endinstance
+endgroup
+
+light lite2
+  type SLF_AMBIENT
+  color (0.5 0.5 0.5)
+endlight
+
+group gLight2
+  instance lite2
+    id instLite2
+  endinstance
+endgroup
+
+####################
+# RENDER
+####################
+
+window Window
+  background (0.3 0.6 0.9)
+endwindow
+
+viewport vp Window
+  origin ( 0.0 0.0 )
+  size ( 1.0 1.0 )
+endviewport
+
+render vp gCamera.instCam.cam gScene
+  light gLight.instLite.lite
+  light gLight2.instLite2.lite2
+endrender
+
+##########################################

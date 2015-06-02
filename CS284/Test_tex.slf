@@ -1,0 +1,117 @@
+### Test-Tex.slf
+### testing texture mapping options ==> in the mesh construct
+### CHS 2009/10/30
+###########################################
+
+tclinit {
+  package require slideui
+}
+
+
+surface RED color ( 1 0 0 ) endsurface
+surface YEL color ( 1 1 0 ) endsurface
+surface GRN color ( 0 1 0 ) endsurface
+surface CYN color ( 0 0 1 ) endsurface
+surface BLU color ( 0 0 1 ) endsurface
+surface MAG color ( 1 0 1 ) endsurface
+surface WHT color ( 1 1 1 ) endsurface
+
+surface pR bitmap "Tex_lizardsRC.gif" SLF_TEXMAP endsurface
+
+#######################################################
+
+point p1 ( 1 -1  1) texture ( 0 0)  endpoint
+point p2 (-1  1  1) texture ( 0 1)  endpoint
+point p3 ( 1  1 -1) texture ( 1 0)  endpoint
+point p4 (-1 -1 -1) texture ( 1 1)  endpoint
+
+face f1 (p2 p1 p3) endface
+face f2 (p4 p3 p1) endface
+face f3 (p3 p4 p2) endface
+face f4 (p1 p2 p4) endface
+
+object oTetra (f1 f2 f3 f4)  surface pR  endobject
+
+mesh mTetra 
+
+vertex p1 ( 1 -1  1) texture ( 0 0)  endvertex
+vertex p2 (-1  1  1) texture ( 0 1)  endvertex
+vertex p3 ( 1  1 -1) texture ( 1 0)  endvertex
+vertex p4 (-1 -1 -1) texture ( 1 1)  endvertex
+
+facet f1 (p2 p1 p3) endfacet
+facet f2 (p4 p3 p1) endfacet
+facet f3 (p3 p4 p2) endfacet
+facet f4 (p1 p2 p4) endfacet
+
+endmesh
+
+#######################################################
+
+
+group gWorld
+  instance oTetra    surface pR   translate(-1.1 0 0)  scale ( 0.1 0.1 0.1 )   endinstance
+  instance mTetra    surface pR   translate( 1.1 0 0)  scale ( 0.1 0.1 0.1 )    endinstance
+
+  instance amb
+    id main_amb
+  endinstance
+  instance sun
+    id front_sun
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+  instance anti_sun
+    id back_sun
+    rotate (1 0 0) (180)
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+endgroup
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0.0 0.0 1 )
+  endinstance
+endgroup
+
+camera cam
+  #projection SLF_PARALLEL
+  projection SLF_PERSPECTIVE
+  #frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 -0.01)
+  frustum ( -0.2 -0.2 -2.0 ) ( 0.2 0.2 -0.01)
+endcamera
+
+light amb
+  type SLF_AMBIENT
+  color (0.4 0.4 0.4)
+endlight
+
+light sun
+  type SLF_DIRECTIONAL
+  color (0.9 0.9 0.9)
+endlight
+
+light anti_sun
+  type SLF_DIRECTIONAL
+  color (0.5 0.5 0.5)
+endlight
+
+window Window
+  background (0.5 0.8 1)
+endwindow
+
+viewport vp Window
+endviewport
+
+render vp gCam.iCam.cam gWorld 
+  light gWorld.front_sun.sun
+  light gWorld.back_sun.anti_sun
+  light gWorld.main_amb.amb
+endrender
+
+
+
+
+

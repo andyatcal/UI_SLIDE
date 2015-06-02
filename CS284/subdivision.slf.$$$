@@ -1,0 +1,444 @@
+##################################################
+# subdivision.slf - subdivision test file
+#
+
+tclinit { 
+
+  package require slideui
+
+  toplevel .slfWindow.ui
+  CreateSLIDESubdivisionObject oSubdivision
+  set widget [CreateSLIDESubdivisionUI .slfWindow.ui oSubdivision]
+  pack $widget
+}
+
+surface sBluePlastic
+  color ( 0 0 1 )
+  reflectivity ( 1 1 1 )
+  exponent 2
+  metallic 0
+endsurface
+
+surface sGreenPlastic
+  color ( 0 1 0 )
+  reflectivity ( 1 1 1 )
+  exponent 2
+  metallic 0
+endsurface
+
+surface sRedPlastic
+  color ( 1 0 0 )
+  reflectivity ( 1 1 1 )
+  exponent 2
+  metallic 0
+endsurface
+
+tclinit {
+  CreateSLIDETetrahedralFrame TetrahedralFrame 0.5
+  CreateSLIDECubeFrame CubeFrame 0.5
+  CreateSLIDECubeFrameWithCorners CubeFrameWithCorners 0.5
+  CreateSLIDEOctahedronFrame OctahedronFrame 0.5
+  CreateSLIDEDodecaStar DodecaStar
+  CreateSLIDEOctaStar OctaStar
+  CreateSLIDEPolyhedrons
+}
+
+(*
+##################################################
+# Random Points Convex Hull
+#
+
+tclinit {
+  set iPoints 10
+
+  set ptsRandomCloud {}
+  for { set i 0 } { $i < $iPoints } { incr i } {
+    set pt(X) [expr (rand() - 0.5) * 2.0]
+    set pt(Y) [expr (rand() - 0.5) * 2.0]
+    set pt(Z) [expr rand()]
+
+    slide create point "pRandomCloud[subst $i]" [list $pt(X) $pt(Y) $pt(Z)]
+    lappend ptsRandomCloud "pRandomCloud[subst $i]"
+  }
+
+  slide create convexhull oRandomCloud $ptsRandomCloud
+}
+*)
+
+##################################################
+# END  : Selective Refinement Test
+#
+
+tclinit {
+  CreateSLIDEGrid Grid_3_3 3 3
+  CreateSLIDEGrid Grid_3_1 3 1
+  CreateSLIDEGrid Grid_4_4 4 4
+  CreateSLIDEGrid Grid_4_1 4 1
+
+  CreateSLIDECubeGrid CubeGrid_2 2
+  CreateSLIDECubeGrid CubeGrid_4 4
+  CreateSLIDECubeGrid CubeGrid_6 6
+  CreateSLIDECubeGrid CubeGrid_8 8
+}
+
+group gRubicsCube
+  instance oGrid_3_3
+    translate ( 0 0 1 )
+  endinstance
+  instance oGrid_3_3
+    translate ( 0 0 1 )
+    rotate ( 0 1 0 ) ( 90 )
+  endinstance
+  instance oGrid_3_3
+    translate ( 0 0 1 )
+    rotate ( 0 1 0 ) ( 180 )
+  endinstance
+  instance oGrid_3_3
+    translate ( 0 0 1 )
+    rotate ( 0 1 0 ) ( -90 )
+  endinstance
+
+  instance oGrid_3_3
+    translate ( 0 0 1 )
+    rotate ( 1 0 0 ) ( 90 )
+  endinstance
+  instance oGrid_3_3
+    translate ( 0 0 1 )
+    rotate ( 1 0 0 ) ( -90 )
+  endinstance
+endgroup
+
+group gSelectiveCube_3
+  instance oGrid_3_1
+    translate ( 0 0 1 )
+  endinstance
+  instance oGrid_3_1
+    translate ( 0 0 1 )
+    rotate ( 0 1 0 ) ( 90 )
+  endinstance
+  instance oGrid_3_1
+    translate ( 0 0 1 )
+    rotate ( 0 1 0 ) ( 180 )
+  endinstance
+  instance oGrid_3_1
+    translate ( 0 0 1 )
+    rotate ( 0 1 0 ) ( -90 )
+  endinstance
+
+  instance oGrid_3_3
+    translate ( 0 0 1 )
+    rotate ( 1 0 0 ) ( 90 )
+  endinstance
+  instance oGrid_3_3
+    translate ( 0 0 1 )
+    rotate ( 1 0 0 ) ( -90 )
+  endinstance
+endgroup
+
+group gSelectiveCube_4
+  instance oGrid_4_1
+    translate ( 0 0 1 )
+  endinstance
+  instance oGrid_4_1
+    translate ( 0 0 1 )
+    rotate ( 0 1 0 ) ( 90 )
+  endinstance
+  instance oGrid_4_1
+    translate ( 0 0 1 )
+    rotate ( 0 1 0 ) ( 180 )
+  endinstance
+  instance oGrid_4_1
+    translate ( 0 0 1 )
+    rotate ( 0 1 0 ) ( -90 )
+  endinstance
+
+  instance oGrid_4_4
+    translate ( 0 0 1 )
+    rotate ( 1 0 0 ) ( 90 )
+  endinstance
+  instance oGrid_4_4
+    translate ( 0 0 1 )
+    rotate ( 1 0 0 ) ( -90 )
+  endinstance
+endgroup
+
+subdivision gSelectiveCube_4_1
+  type SLF_SUBDIVISION_CATMULL_CLARK
+
+  subdivisions 1
+
+  instance gSelectiveCube_4
+  endinstance
+endsubdivision
+
+subdivision gSelectiveCube_4_2
+  type SLF_SUBDIVISION_CATMULL_CLARK
+
+  subdivisions 2
+
+  instance gSelectiveCube_4
+  endinstance
+endsubdivision
+
+subdivision gSelectiveCube_4_3
+  type SLF_SUBDIVISION_CATMULL_CLARK
+
+  subdivisions 3
+
+  instance gSelectiveCube_4
+  endinstance
+endsubdivision
+
+#
+# END  : Selective Refinement Test
+##################################################
+
+##################################################
+# START: Selective Refinement Test
+#
+
+tclinit {
+  set pcBaseName HexPrism
+  set uiN 6
+
+  set fHeight 1.0
+  set fRadius 1.0
+
+  set fThetaDelta [expr $SLF_PI/$uiN]
+  set fTheta 0.0
+
+  slide create point p[subst $pcBaseName]_0_0 \
+    [list 0 0 [expr $fHeight] ]
+  slide create point p[subst $pcBaseName]_1_0 \
+    [list 0 0 [expr -$fHeight] ]
+
+  for { set i 0 } { $i < $uiN } { incr i } {
+    slide create point p[subst $pcBaseName]_0_[expr $i+1] \
+      [list [expr $fRadius*cos($fTheta)] \
+            [expr $fRadius*sin($fTheta)] \
+            [expr $fHeight] ]
+    set fTheta [expr $fTheta + $fThetaDelta]
+
+    slide create point p[subst $pcBaseName]_1_[expr $i+1] \
+      [list [expr $fRadius*cos($fTheta)] \
+            [expr $fRadius*sin($fTheta)] \
+            [expr -$fHeight] ]
+    set fTheta [expr $fTheta + $fThetaDelta]
+  }
+
+  set lFaces {}
+  set j [expr $uiN - 1]
+  for { set i 0 } { $i < $uiN } { incr i } {
+    slide create face f[subst $pcBaseName]_0_[expr $i] \
+      [list p[subst $pcBaseName]_0_0 \
+            p[subst $pcBaseName]_0_[expr $j+1] \
+	    p[subst $pcBaseName]_0_[expr $i+1] ]
+
+    slide create face f[subst $pcBaseName]_1_[expr $i] \
+      [list p[subst $pcBaseName]_0_[expr $i+1] \
+            p[subst $pcBaseName]_0_[expr $j+1] \
+	    p[subst $pcBaseName]_1_[expr $j+1] ]
+
+    slide create face f[subst $pcBaseName]_2_[expr $i] \
+      [list p[subst $pcBaseName]_0_[expr $i+1] \
+            p[subst $pcBaseName]_1_[expr $j+1] \
+	    p[subst $pcBaseName]_1_[expr $i+1] ]
+
+    slide create face f[subst $pcBaseName]_3_[expr $i] \
+      [list p[subst $pcBaseName]_1_0 \
+            p[subst $pcBaseName]_1_[expr $i+1] \
+	    p[subst $pcBaseName]_1_[expr $j+1] ]
+
+    lappend lFaces f[subst $pcBaseName]_0_[expr $i] \
+                   f[subst $pcBaseName]_1_[expr $i] \
+                   f[subst $pcBaseName]_2_[expr $i] \
+                   f[subst $pcBaseName]_3_[expr $i]
+
+    set j $i
+  }
+
+  slide create object o[subst $pcBaseName] $lFaces
+}
+
+subdivision gHexPrism_1
+  type SLF_SUBDIVISION_CORNER_ROUNDING_TESSELATE
+
+  subdivisions 1
+
+  instance oHexPrism
+  endinstance
+endsubdivision
+
+subdivision gHexPrism_2
+  type SLF_SUBDIVISION_CORNER_ROUNDING_TESSELATE
+
+  subdivisions 2
+
+  instance oHexPrism
+  endinstance
+endsubdivision
+
+subdivision gHexPrism_3
+  type SLF_SUBDIVISION_CORNER_ROUNDING_TESSELATE
+
+  subdivisions 3
+
+  instance oHexPrism
+  endinstance
+endsubdivision
+
+#
+# END  : Selective Refinement Test
+##################################################
+
+##################################################
+# Subdivision
+#
+
+group gSubdivisionMesh
+
+  #instance gCubeGrid_2
+  #instance gCubeGrid_4
+  #instance gCubeGrid_6
+  #instance gCubeGrid_8
+
+  #instance gSelectiveCube_3
+  #instance gSelectiveCube_4
+  #instance gSelectiveCube_4_1
+  #instance gSelectiveCube_4_2
+  #instance gSelectiveCube_4_3
+  #instance oHexPrism
+ instance gHexPrism_1
+  #instance gHexPrism_2
+  #instance gHexPrism_3
+  #instance gRubicsCube
+
+  #instance gTetrahedralFrame
+  #instance gCubeFrame
+  #instance gCubeFrameWithCorners
+  #instance gOctahedronFrame
+
+  #instance gTetrahedron
+  #instance gTetrahedron1
+  #instance gTetrahedron2
+  #instance gCube
+  #instance gCube1
+  #instance gCube2
+  #instance gOctahedron
+  #instance gOctahedron1
+  #instance gCubeOctahedron
+  #instance gCubeOctahedron1
+  #instance gOctaStar
+  #instance gDodecahedron
+  #instance gDodecahedron1
+  #instance gDodecahedron2
+  #instance gDodecaStar
+  #instance gIcosahedron
+  #instance gIcosahedron1
+  #instance gDodecahedronIcosahedron
+  #instance gDodecahedronIcosahedron1
+
+  #instance oRandomCloud
+  endinstance
+endgroup
+
+subdivision oSubdivision
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+  instance gSubdivisionMesh
+  endinstance
+endsubdivision
+
+##################################################
+# Set up view
+#
+
+surface sBlack
+  color ( 0 0 0 )
+endsurface
+
+group gSubdivision
+  surface sBluePlastic
+
+  instance oSubdivision
+    #shading { expr $shading }
+    #translate ( 0 0 4 )
+  endinstance
+
+endgroup
+
+group gRoot
+  shading {expr $oSubdivision(shading)}
+
+  #instance gSubdivisionMesh
+  instance gSubdivision
+    #rotate ( 0 1 0 ) ( -15 )
+    #rotate ( 1 0 0 ) ( 20 )
+    scale ( 0.10 0.10 0.10 )
+  endinstance
+endgroup
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0 0 1 )
+  endinstance
+endgroup
+
+camera cam
+  projection SLF_PERSPECTIVE
+  frustum ( -0.5 -0.5 -2 ) ( 0.5 0.5 -0.2 )
+endcamera
+
+light lAmbient
+  type SLF_AMBIENT
+  color ( 0.2 0.2 0.2 )
+endlight
+
+light lTop
+  type SLF_DIRECTIONAL
+  color ( 1.0 1.0 1.0 )
+endlight
+
+group gLight
+  instance lTop
+    id iTop
+    lookat
+      eye ( 0 0 0 )
+      target ( -1 -1 -1 )
+      up ( 0 1 0 )
+    endlookat
+    translate ( 1 1 1 )
+  endinstance
+endgroup
+
+render Viewport gCam.iCam.cam gRoot
+#render Viewport gCam.iCam.cam oSubdivision
+  light lAmbient
+  light gLight.iTop.lTop
+endrender
+
+viewport Viewport Window
+endviewport
+
+window Window
+#  background ( 0 0 0 )
+#  background ( 1 1 1 )
+#  background ( 0 1 0 )
+  background ( 0.25 0.60 1.0 )
+endwindow
