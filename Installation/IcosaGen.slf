@@ -1,0 +1,227 @@
+#Sample of a SLIDE file using instancing}
+# self-contained colored icosahedron -- 5 colors
+# chs 2000/10/6
+###############################################
+tclinit {
+  set winName .slfWindow
+
+  source SLIDEUI.tcl
+  source MATH.tcl
+
+  proc CreateVarUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set w [CreateScale $name $root w "width" 0.2 0.01 0.9 0.01 1 horizontal]	
+
+    pack $w  -side top -fill x
+  }
+
+  CreateVarUI $winName var
+}
+
+
+surface  c1 color ( 0.6 0.2 0.4 ) endsurface
+surface  c2 color ( 0.8 0.8 0.2 ) endsurface
+surface  c3 color ( 0.4 0.9 0.2 ) endsurface
+surface  c4 color ( 0.2 0.8 0.8 ) endsurface
+surface  c5 color ( 0.4 0.2 0.9 ) endsurface
+
+point K ( 0.381966 -0.661584  -1 ) endpoint
+point L ( 0.381966  0.661584  -1 ) endpoint
+point Z (-0.763932  0         -1 ) endpoint
+
+
+### A simple double-sided triangle
+face T (Z L K) endface
+face Tb (Z K L) endface
+object triangle (T Tb) endobject
+
+### Put triangle at variable distance form origin
+group tri
+  instance triangle
+    translate (0 0 {expr -$var_w } )
+  endinstance
+endgroup
+
+
+(*
+### A sweep to produce a triangle frame
+
+polyline tripath
+  pointlist (K Z L K)
+endpolyline
+
+point A ( 0 0 0) endpoint
+point B ( {expr $var_w } 0 0) endpoint
+point C ( {expr $var_w } {expr -$var_w*2.618034 } 0) endpoint
+
+polyline triX
+  pointlist (C B A)
+endpolyline
+
+crosssection frame
+  type polyline triX
+endcrosssection
+
+sweep tri
+  path tripath
+    minimizetorsion {expr $var_minTorsion}
+  endpath
+
+  crosssection frame
+  endcrosssection
+
+  drawpath {expr $var_drawPath}
+  drawsweep {expr $var_drawSweep}
+endsweep
+*)
+
+
+### Icosahedral Symmetry generator
+
+group icosa
+  instance tri #i i0 (F C1);
+    surface c1
+  endinstance
+  instance tri #i i1 (F C2 -ry 41.8103148871 -rz 180);
+    surface c2
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (180)
+  endinstance
+  instance tri #i i2 (F C3 -ry 41.8103148871 -rz -60);
+    surface c3
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (-60)
+  endinstance
+  instance tri #i i3 (F C4 -ry 41.8103148871 -rz 60);
+    surface c4
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (60)
+  endinstance
+  instance tri #i i4 (F C5 -ry 41.8103148871 -rz -120 -ry -41.8103148871);
+    surface c5
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (-120)
+    rotate (0 1 0) (-41.8103)
+  endinstance
+  instance tri #i i5 (F C3 -ry 41.8103148871 -rz 120 -ry -41.8103148871);
+    surface c3
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (120)
+    rotate (0 1 0) (-41.8103)
+  endinstance
+  instance tri #i i6 (F C5 -ry 41.8103148871 -rz -120 -ry -41.8103148871 -rz 120);
+    surface c5
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (-120)
+    rotate (0 1 0) (-41.8103)
+    rotate (0 0 1) (120)
+  endinstance
+  instance tri #i i7 (F C4 -ry 41.8103148871 -rz 120 -ry -41.8103148871 -rz 120);
+    surface c4
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (120)
+    rotate (0 1 0) (-41.8103)
+    rotate (0 0 1) (120)
+  endinstance
+  instance tri #i i8 (F C5 -ry 41.8103148871 -rz -120 -ry -41.8103148871 -rz -120);
+    surface c5
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (-120)
+    rotate (0 1 0) (-41.8103)
+    rotate (0 0 1) (-120)
+  endinstance
+  instance tri #i i9 (F C2 -ry 41.8103148871 -rz 120 -ry -41.8103148871 -rz -120);
+    surface c2
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (120)
+    rotate (0 1 0) (-41.8103)
+    rotate (0 0 1) (-120)
+  endinstance
+  instance tri #i I0 (F C5 -ry 180);
+    surface c5
+    rotate (0 1 0) (180)
+  endinstance
+  instance tri #i I1 (F C4 -ry 41.8103148871 -rz 180 -ry 180);
+    surface c4
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (180)
+    rotate (0 1 0) (180)
+  endinstance
+  instance tri #i I2 (F C3 -ry 41.8103148871 -rz -60 -ry 180);
+    surface c3
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (-60)
+    rotate (0 1 0) (180)
+  endinstance
+  instance tri #i I3 (F C2 -ry 41.8103148871 -rz 60 -ry 180);
+    surface c2
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (60)
+    rotate (0 1 0) (180)
+  endinstance 
+  instance tri #i I4 (F C1 -ry 41.8103148871 -rz -120 -ry -41.8103148871 -ry 180);
+    surface c1
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (-120)
+    rotate (0 1 0) (-41.8103)
+    rotate (0 1 0) (180)
+  endinstance 
+  instance tri #i I5 (F C3 -ry 41.8103148871 -rz 120 -ry -41.8103148871 -ry 180);
+    surface c3
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (120)
+    rotate (0 1 0) (-41.8103)
+    rotate (0 1 0) (180)
+  endinstance 
+  instance tri #i I6 (F C1 -ry 41.8103148871 -rz -120 -ry -41.8103148871 -rz 120 -ry 180);
+    surface c1
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (-120)
+    rotate (0 1 0) (-41.8103)
+    rotate (0 0 1) (120)
+    rotate (0 1 0) (180)
+  endinstance
+  instance tri #i I7 (F C2 -ry 41.8103148871 -rz 120 -ry -41.8103148871 -rz 120 -ry 180);
+    surface c2
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (120)
+    rotate (0 1 0) (-41.8103)
+    rotate (0 0 1) (120)
+    rotate (0 1 0) (180)
+  endinstance
+  instance tri #i I8 (F C1 -ry 41.8103148871 -rz -120 -ry -41.8103148871 -rz -120 -ry 180);
+    surface c1
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (-120)
+    rotate (0 1 0) (-41.8103)
+    rotate (0 0 1) (-120)
+    rotate (0 1 0) (180)
+  endinstance
+  instance tri #i I9 (F C4 -ry 41.8103148871 -rz 120 -ry -41.8103148871 -rz -120 -ry 180);
+    surface c4
+    rotate (0 1 0) (41.8103)
+    rotate (0 0 1) (120)
+    rotate (0 1 0) (-41.8103)
+    rotate (0 0 1) (-120)
+    rotate (0 1 0) (180)
+  endinstance 
+endgroup
+
+group assembly
+  instance icosa
+      scale (0.5 0.5 0.5)
+  endinstance
+endgroup
+
+include "viewing.slf"

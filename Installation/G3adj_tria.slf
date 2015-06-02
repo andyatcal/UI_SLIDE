@@ -1,0 +1,316 @@
+### G3adj_tria.slf
+### Adjustable Y-connector for Genus-3 Surface
+### Based on triangles
+### CHS 2003-10-1
+###################################################
+
+tclinit {
+  package require slideui
+}
+
+tclinit { 
+  toplevel .slfWindow.ui
+  CreateSLIDESubdivisionObject oSubdivision
+  set widget [CreateSLIDESubdivisionUI .slfWindow.ui oSubdivision]
+  pack $widget
+}
+
+
+tclinit {
+  package require slideui
+  
+  proc CreateParamObject { name } {
+    set this $name
+    global $this
+
+    # v0 -- VARIABLE
+    set [subst $this](v0) 1.60
+    set [subst $this](v0_min) 0.8
+    set [subst $this](v0_max) 2.0
+    set [subst $this](v0_resolution) 0.02
+
+    # v1 -- VARIABLE
+    set [subst $this](v1) 0.4
+    set [subst $this](v1_min) 0.1
+    set [subst $this](v1_max) 0.9
+    set [subst $this](v1_resolution) 0.02
+
+    # v2 -- VARIABLE
+    set [subst $this](v2) 0.70
+    set [subst $this](v2_min) 0
+    set [subst $this](v2_max) 2
+    set [subst $this](v2_resolution) 0.02
+
+    # v3 -- VARIABLE
+    set [subst $this](v3) 0.30
+    set [subst $this](v3_min) 0
+    set [subst $this](v3_max) 1
+    set [subst $this](v3_resolution) 0.02
+
+    # v4 -- VARIABLE
+    set [subst $this](v4) 0.60
+    set [subst $this](v4_min) 0
+    set [subst $this](v4_max) 1
+    set [subst $this](v4_resolution) 0.02
+
+    # v5 -- VARIABLE
+    set [subst $this](v5) 0.70
+    set [subst $this](v5_min) 0.1
+    set [subst $this](v5_max) 1.0
+    set [subst $this](v5_resolution) 0.02
+
+    # v6 -- VARIABLE
+    set [subst $this](v6) 0.80
+    set [subst $this](v6_min) 0
+    set [subst $this](v6_max) 1
+    set [subst $this](v6_resolution) 0.01
+
+  }
+
+   proc CreateParamUI { parent name } {
+    set root $parent.f$name
+    set this $name
+
+    global $this
+    frame $root
+
+    ## SLIDER Frame
+    frame $root.fScales
+    
+    ## v0 -- SLIDER
+    set widget [CreateScale $root.fScales s_v0 \
+            [subst $this](v0) "v0: tip-outer" \
+            [subst $[subst $this](v0_min)] \
+            [subst $[subst $this](v0_max)] \
+            [subst $[subst $this](v0_resolution)]]
+    pack $widget -side top -fill x
+
+    ## v1 -- SLIDER
+    set widget [CreateScale $root.fScales s_v1 \
+            [subst $this](v1) "v1: tip-inner" \
+            [subst $[subst $this](v1_min)] \
+            [subst $[subst $this](v1_max)] \
+            [subst $[subst $this](v1_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## v2 -- SLIDER
+    set widget [CreateScale $root.fScales s_v2 \
+            [subst $this](v2) "v2: armpit-dist" \
+            [subst $[subst $this](v2_min)] \
+            [subst $[subst $this](v2_max)] \
+            [subst $[subst $this](v2_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## v3 -- SLIDER
+    set widget [CreateScale $root.fScales s_v3 \
+            [subst $this](v3) "v3: armpit-height" \
+            [subst $[subst $this](v3_min)] \
+            [subst $[subst $this](v3_max)] \
+            [subst $[subst $this](v3_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## v4 -- SLIDER
+    set widget [CreateScale $root.fScales s_v4 \
+            [subst $this](v4) "v4: shoulder" \
+            [subst $[subst $this](v4_min)] \
+            [subst $[subst $this](v4_max)] \
+            [subst $[subst $this](v4_resolution)]]
+    pack $widget -side top -fill x
+    
+    ## v5 -- SLIDER
+    set widget [CreateScale $root.fScales s_v5 \
+            [subst $this](v5) "v5: arm-diam" \
+            [subst $[subst $this](v5_min)] \
+            [subst $[subst $this](v5_max)] \
+            [subst $[subst $this](v5_resolution)]]
+    pack $widget -side top -fill x
+
+    ## v6 -- SLIDER
+    set widget [CreateScale $root.fScales s_v6 \
+            [subst $this](v6) "v6: arm-bend" \
+            [subst $[subst $this](v6_min)] \
+            [subst $[subst $this](v6_max)] \
+            [subst $[subst $this](v6_resolution)]]
+    pack $widget -side top -fill x
+
+    pack $root.fScales -side top -fill x
+
+    return $root
+  }
+
+  toplevel .slfWindow.param
+  CreateParamObject param
+  set widget [CreateParamUI .slfWindow.param param]
+  pack $widget
+}
+
+
+surface RED color ( 1 0 0 ) endsurface
+surface YEL color ( 1 1 0 ) endsurface
+surface GRN color ( 0 1 0 ) endsurface
+surface CYN color ( 0 0 1 ) endsurface
+surface BLU color ( 0 0 1 ) endsurface
+surface MAG color ( 1 0 1 ) endsurface
+surface WHT color ( 1 1 1 ) endsurface
+
+
+#######################################################
+
+#outer and inner tips
+point XYT  ( {expr  $param(v0)} {expr  $param(v0)} {expr -$param(v0)} ) endpoint
+point XY1T ( {expr 1 - $param(v1)} {expr 1 - $param(v1)} {expr $param(v1) - 1}) endpoint
+
+#shoulder points
+point XYTs ( {expr $param(v0) + $param(v4)} {expr $param(v0) - $param(v4)} {expr $param(v4) - $param(v0)}) endpoint
+point ZTs (  {expr $param(v0) - $param(v4)} {expr -$param(v4) + $param(v0)} {expr -$param(v0) - $param(v4)}) endpoint
+
+#armpit points
+point XYyT ( {expr 1 + $param(v3)} {expr 1 - $param(v2)} {expr -$param(v3) - 1}) endpoint
+point XYzT ( {expr 1 + $param(v3)} {expr 1 + $param(v3)} {expr $param(v2) - 1}) endpoint
+
+#mid-arm joint
+point XT1 (  {expr 1 + $param(v6) + $param(v5)} 0 0) endpoint
+point XT2 (  {expr 1 + $param(v6)} {expr $param(v5) / sqrt(2)} {expr $param(v5) / sqrt(2)}) endpoint
+point XT3 (  {expr 1 + $param(v6) - $param(v5)} 0 0) endpoint
+point XT4 (  {expr 1 + $param(v6)} {expr -$param(v5) / sqrt(2)} {expr -$param(v5) / sqrt(2)}) endpoint
+
+
+face p1 (XYyT XYTs XT1 ) endface
+face q1 (XYyT  XT1 XT4) endface
+face p3 (XYTs XYzT XT2 ) endface
+face q3 (XYTs  XT2 XT1) endface
+face p5 (XYzT XY1T XT3 ) endface
+face q5 (XYzT  XT3 XT2) endface
+face p7 (XYyT XT4 XT3 ) endface
+face q7 (XYyT  XT3 XY1T) endface
+face pts (XYTs XYyT ZTs ) endface
+face qts (XYTs  ZTs XYT ) endface
+
+
+object halfArm (p1 q1 p3 q3 p5 q5 p7 q7 pts qts)
+	solid SLF_SOLID
+	shading SLF_FLAT
+endobject
+
+##################################################
+
+group tetraCorner
+  instance halfArm  endinstance
+  instance halfArm    rotate (1 1 -1) (120)   endinstance
+  instance halfArm    rotate (1 1 -1) (-120)  endinstance
+endgroup
+
+group gWholeMesh
+  instance tetraCorner  endinstance
+  instance tetraCorner    rotate (1 0 0) (180)  endinstance
+  instance tetraCorner    rotate (0 1 0) (180)  endinstance
+  instance tetraCorner    rotate (0 0 1) (180)  endinstance
+endgroup
+
+################# SUBDIVISION ########################################
+
+subdivision oSubdivSurf
+
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)  }
+  errormetric {expr $oSubdivision(errormetric)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawcurrent {expr $oSubdivision(drawcurrent)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+  vknots {expr $oSubdivision(a)}
+  vorder {expr $oSubdivision(b)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+
+  instance gWholeMesh    surface GRN  endinstance
+
+endsubdivision
+
+#######################################################
+
+group assembly
+ # instance gWholeMesh
+  instance oSubdivSurf
+    surface RED
+    scale(0.3 0.3 0.3)
+  endinstance 
+endgroup
+
+#####   include "viewing.slf"
+# A generic setup for viewing SLF objects
+##########################################
+
+light amb
+  type SLF_AMBIENT
+  color (0.2 0.2 0.2)
+endlight
+
+light sun
+  type SLF_DIRECTIONAL
+  color (0.8 0.8 0.8)
+endlight
+
+light anti_sun
+  type SLF_DIRECTIONAL
+  color (0.4 0.4 0.4)
+endlight
+
+group world
+  instance assembly   
+    scale ( 0.1 0.1 0.1 )
+  endinstance
+
+  instance amb
+    id main_amb
+  endinstance
+  instance sun
+    id front_sun
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+  instance anti_sun
+    id back_sun
+    rotate (1 0 0) (180)
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+endgroup
+
+camera cam
+   projection SLF_PERSPECTIVE
+  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 -0.01)
+endcamera
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0.0 0.0 1 )
+  endinstance
+endgroup
+
+window Window
+  background (0.3 0.6 0.3)
+endwindow
+
+viewport vp Window
+endviewport
+
+render vp gCam.iCam.cam world 
+  light world.front_sun.sun
+  light world.back_sun.anti_sun
+  light world.main_amb.amb
+endrender
+
+##########################################
+

@@ -1,0 +1,279 @@
+###G2_3666quads.slf 
+
+### Adjustable Y-connector for Genus-2 Surface
+### Based on 3666 quads -- for Catmull-Clark Subdivision
+### CHS 2015-3-18
+###################################################
+
+
+tclinit {
+
+  package require slideui
+
+  toplevel .slfWindow.ui
+  CreateSLIDESubdivisionObject oSubdivision
+  set widget [CreateSLIDESubdivisionUI .slfWindow.ui oSubdivision]
+  pack $widget
+
+  toplevel .slfWindow.uiOffset
+  CreateSLIDEOffsetObject oOffset
+  set widget [CreateSLIDEOffsetUI .slfWindow.uiOffset oOffset]
+  pack $widget
+}
+
+
+tclinit {
+  set winName .slfWindow
+
+  source SLIDEUI.tcl
+  source MATH.tcl
+
+  set to_rad [expr $SLF_PI/180.0 ]
+  CreateGroupUI $winName gRoot
+}
+
+## setting up some sliders for variable parameters  #######################################################
+
+tclinit {
+  
+  proc CreateParUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set rbal   [CreateScale $name $root  rbal  "rbal"    2.5  1    9    0.1   1 horizontal]
+    set rarm   [CreateScale $name $root  rarm  "rarm"    1.5  1    4    0.1   1 horizontal]
+    set ztop   [CreateScale $name $root  ztop  "ztop"    6    3   12    0.1   1 horizontal]
+    set zthk   [CreateScale $name $root  zthk  "zthk"    2    0    2    0.1   1 horizontal]
+    set zohf   [CreateScale $name $root  zohf  "zohf"    6    2   10    0.1   1 horizontal]
+    set zihf   [CreateScale $name $root  zihf  "zihf"    1.5    1    8    0.1   1 horizontal]
+    set my     [CreateScale $name $root  my    "my"      4    1    6    0.1   1 horizontal]
+    set mz     [CreateScale $name $root  mz    "mz"      3.5  1    6    0.1   1 horizontal]
+    set ox     [CreateScale $name $root  ox    "ox"      2    1    6    0.1   1 horizontal]
+    set oy     [CreateScale $name $root  oy    "oy"      3    1    6    0.1   1 horizontal]
+    set oz     [CreateScale $name $root  oz    "oz"      5    1    6    0.1   1 horizontal]
+    set ix     [CreateScale $name $root  ix    "ix"      1    1    6    0.1   1 horizontal]
+    set iy     [CreateScale $name $root  iy    "iy"      1.5  1    6    0.1   1 horizontal]
+    set iz     [CreateScale $name $root  iz    "iz"      2    1    6    0.1   1 horizontal]
+
+    pack $rbal $rarm $ztop $zthk $zohf $zihf $my $mz $ox $oy $oz $ix $iy $iz  -side top -fill x
+  }
+
+  CreateParUI $winName v
+}
+
+#####  Some elementary geometry   ######################
+
+## Coordinate axes:
+point ooo  ( 0 0 0 ) endpoint
+point xoo  ( 5 0 0 ) endpoint
+point oyo  ( 0 5 0 ) endpoint
+point ooz  ( 0 0 5 ) endpoint
+
+polyline xaxis pointlist (ooo xoo) endpolyline
+polyline yaxis pointlist (ooo oyo) endpolyline
+polyline zaxis pointlist (ooo ooz) endpolyline
+
+group coord_axes
+  instance xaxis surface R endinstance
+  instance yaxis surface B endinstance
+  instance zaxis surface G endinstance
+endgroup
+
+
+#######################################################
+
+#arm rings:
+point a  ( {expr 1.732*$v_rbal+1}   {expr  $v_rbal-1.732} 0 ) endpoint
+point b  ( {expr 1.732*($v_rbal+$v_rarm)} {expr  $v_rbal+$v_rarm} 0 ) endpoint
+point c  ( {expr 1.732*$v_rbal-1}   {expr  $v_rbal+1.732} 0 ) endpoint
+point d  ( {expr 1.732*($v_rbal-$v_rarm)} {expr  $v_rbal-$v_rarm} 0 ) endpoint
+
+point e  ( {expr -1.732*$v_rbal-1}   {expr  $v_rbal-1.732} 0 ) endpoint
+point f  ( {expr -1.732*($v_rbal+$v_rarm)} {expr  $v_rbal+$v_rarm} 0 ) endpoint
+point g  ( {expr -1.732*$v_rbal+1}   {expr  $v_rbal+1.732} 0 ) endpoint
+point h  ( {expr -1.732*($v_rbal-$v_rarm)} {expr  $v_rbal-$v_rarm} 0 ) endpoint
+
+#zenith:
+point t  ( 0 0 {expr $v_ztop} ) endpoint
+point u  ( 0 0 {expr $v_ztop-$v_zthk} ) endpoint
+
+#half-way points on arches to arm rings:
+point j  ( {expr  0.5*( 1.732*$v_rbal+$v_rarm)} {expr  0.5*( $v_rbal-1.732*$v_rarm)} {expr $v_zohf} ) endpoint   # a/2
+point k  ( {expr  0.5*(-1.732*$v_rbal+$v_rarm)} {expr  0.5*( $v_rbal+1.732*$v_rarm)} {expr $v_zohf} ) endpoint   # g/2
+point r  ( {expr  0.5*( 1.732*$v_rbal-$v_rarm)} {expr  0.5*( $v_rbal+1.732*$v_rarm)} {expr $v_zihf} ) endpoint   # c/2
+point s  ( {expr  0.5*(-1.732*$v_rbal-$v_rarm)} {expr  0.5*( $v_rbal-1.732*$v_rarm)} {expr $v_zihf} ) endpoint   # e/2
+
+#outer arch, and mid patch controls:
+point m  ( 0 {expr $v_my} {expr $v_mz} ) endpoint
+point o  ( {expr  $v_ox} {expr $v_oy} {expr $v_oz} ) endpoint
+point i  ( {expr -$v_ix} {expr $v_iy} {expr $v_iz} ) endpoint
+
+#test faces
+face f0 (a b c d) surface Y  endface
+face f9 (h g f e) surface M  endface
+
+# outer 4 patches:
+face f1 (t j o k) endface
+face f2 (j a b o) endface
+face f3 (k o m g) endface
+face f4 (o b c m) endface
+
+# inner 4 patches:
+face f5 (u s i r) endface
+face f6 (r i m c) endface
+face f7 (s e h i) endface
+face f8 (i h g m) endface
+
+
+#object surf (f0 f9)  # test alignment
+object surf (f1 f2 f3 f4  f5 f6 f7 f8)
+#  solid SLF_HOLLOW
+endobject
+
+group upper
+  instance surf  surface R  endinstance 
+  instance surf  surface G rotate(0 0 1)(120) endinstance 
+  instance surf  surface B rotate(0 0 1)(-120) endinstance 
+endgroup
+
+group gWholeMesh
+  instance coord_axes  scale(2 2 2)   endinstance
+  instance upper endinstance 
+  instance upper rotate(0 1 0)(180) endinstance 
+endgroup
+
+################# SUBDIVISION ########################################
+
+subdivision oSubdivSurf
+
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)  }
+  errormetric {expr $oSubdivision(errormetric)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawcurrent {expr $oSubdivision(drawcurrent)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+  vknots {expr $oSubdivision(a)}
+  vorder {expr $oSubdivision(b)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+  instance gWholeMesh   endinstance
+
+endsubdivision
+
+#######################################################
+
+
+
+
+####  Some surface colors  ################################
+
+surface R color (1 0 0) endsurface     # Red
+surface O color (0.9 0.6 0) endsurface # Orange
+surface Y color (1 1 0) endsurface     # Yellow
+surface L color (0.6 0.8 0) endsurface   # Lime
+surface G color (0 0.9 0) endsurface     # Green
+surface A color (0 0.9 0.7) endsurface # Aqua
+surface C color (0 1 1) endsurface     # Cyan
+surface U color (0 0.5 1) endsurface   # Uniform
+surface B color (0 0 1) endsurface     # Blue
+surface P color (0.6 0 1) endsurface   # Purple
+surface M color (1 0 1) endsurface     # Magenta
+surface Z color (1 0 0.5) endsurface   # Zinnober
+
+surface K color (0 0 0) endsurface     # blacK
+surface W color (1 1 1) endsurface     # White
+
+
+
+######################################################################################################
+# A generic setup for viewing SLF objects
+##########################################
+
+group world
+  lod {expr $gRoot_lod}
+  shading {expr $gRoot_shading}
+
+#  instance  gWholeMesh
+  instance oSubdivSurf   surface G
+    scale ( 0.01 0.01 0.01 )
+  endinstance
+
+  instance amb
+    id main_amb
+  endinstance
+  instance sun
+    id front_sun
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+  instance anti_sun
+    id back_sun
+    rotate (1 0 0) (180)
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+endgroup
+
+
+light amb
+  type SLF_AMBIENT
+  color (0.2 0.2 0.2)
+endlight
+
+light sun
+  type SLF_DIRECTIONAL
+  color (0.8 0.8 0.8)
+endlight
+
+light anti_sun
+  type SLF_DIRECTIONAL
+  color (0.4 0.4 0.4)
+endlight
+
+camera cam
+   projection SLF_PERSPECTIVE
+  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 -0.01)
+endcamera
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0.0 0.0 1 )
+  endinstance
+endgroup
+
+window Window
+  background (0.8 0.8 0.9)
+endwindow
+
+viewport vp Window
+endviewport
+
+render vp gCam.iCam.cam world 
+  light world.front_sun.sun
+  light world.back_sun.anti_sun
+  light world.main_amb.amb
+endrender
+
+##########################################
+

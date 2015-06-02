@@ -1,0 +1,307 @@
+### Adjustable Y-connector for Genus-3 Surface
+### CHS 2003-10-1
+###########################################
+
+tclinit {
+  package require slideui
+}
+
+
+tclinit { 
+  toplevel .slfWindow.ui
+  CreateSLIDESubdivisionObject oSubdivision
+  set widget [CreateSLIDESubdivisionUI .slfWindow.ui oSubdivision]
+  pack $widget
+
+  toplevel .slfWindow.uiOffset1
+  CreateSLIDEOffsetObject oOffset1
+  set widget [CreateSLIDEOffsetUI .slfWindow.uiOffset1 oOffset1]
+  pack $widget
+
+}
+
+
+tclinit {
+
+  package require slideui
+  
+  proc CreateParamObject { name } {
+    set this $name
+    global $this
+
+    # v0 -- VARIABLE
+    set [subst $this](v0) 1.0
+    set [subst $this](v0_min) -3.0
+    set [subst $this](v0_max) 3.0
+    set [subst $this](v0_resolution) 0.02
+
+    # v1 -- VARIABLE
+    set [subst $this](v1) .5
+    set [subst $this](v1_min) 0.1
+    set [subst $this](v1_max) 1.0
+    set [subst $this](v1_resolution) 0.02
+
+    # v2 -- VARIABLE
+    set [subst $this](v2) .5
+    set [subst $this](v2_min) 0.1
+    set [subst $this](v2_max) 1.0
+    set [subst $this](v2_resolution) 0.02
+
+  }
+
+   proc CreateParamUI { parent name } {
+    set root $parent.f$name
+    set this $name
+
+    global $this
+    frame $root
+
+    ## SLIDER Frame
+    frame $root.fScales
+    
+    ## v0 -- SLIDER
+    set widget [CreateScale $root.fScales s_v0 \
+            [subst $this](v0) "Center vertex height" \
+            [subst $[subst $this](v0_min)] \
+            [subst $[subst $this](v0_max)] \
+            [subst $[subst $this](v0_resolution)]]
+    pack $widget -side top -fill x
+
+    ## v1 -- SLIDER
+    set widget [CreateScale $root.fScales s_v1 \
+            [subst $this](v1) "Hieght of the Ring" \
+            [subst $[subst $this](v1_min)] \
+            [subst $[subst $this](v1_max)] \
+            [subst $[subst $this](v1_resolution)]]
+    pack $widget -side top -fill x
+
+    ## v2 -- SLIDER
+    set widget [CreateScale $root.fScales s_v2 \
+            [subst $this](v2) "Width of the Ring" \
+            [subst $[subst $this](v2_min)] \
+            [subst $[subst $this](v2_max)] \
+            [subst $[subst $this](v2_resolution)]]
+    pack $widget -side top -fill x
+
+
+
+    pack $root.fScales -side top -fill x
+
+    return $root
+  }
+
+  toplevel .slfWindow.param
+  CreateParamObject param
+  set widget [CreateParamUI .slfWindow.param param]
+  pack $widget
+
+  puts "created paramUI"
+}
+
+surface RED color ( 1 0 0 ) endsurface
+surface YEL color ( 1 1 0 ) endsurface
+surface GRN color ( 0 1 0 ) endsurface
+surface CYN color ( 0 0 1 ) endsurface
+surface BLU color ( 0 0 1 ) endsurface
+surface MAG color ( 1 0 1 ) endsurface
+surface WHT color ( 1 1 1 ) endsurface
+
+#######################################################
+## cube approach 2 x 2 x 2
+
+point b0 ({expr  $param(v0)} {expr  $param(v0)} {expr  $param(v0)} ) endpoint
+point b3 (1 -1 1) endpoint
+point b2 (1 -1 -1) endpoint
+point b1 (1 1 -1) endpoint
+point b4 (-1 1 1) endpoint
+point b7 (-1 -1 1) endpoint
+point b6 ({expr  -$param(v0)} {expr  -$param(v0)} {expr  -$param(v0)} ) endpoint
+point b5 (-1 1 -1) endpoint
+
+face f0 (b0 b3 b2) endface
+face f1 (b0 b2 b1) endface
+face f2 (b4 b5 b6) endface
+face f3 (b4 b6 b7) endface
+face f4 (b0 b1 b5) endface
+face f5 (b0 b5 b4) endface
+face f6 (b1 b2 b6) endface
+face f7 (b1 b6 b5) endface
+face f8 (b2 b3 b7) endface
+face f9 (b2 b7 b6) endface
+face f10 (b3 b0 b4) endface
+face f11 (b3 b4 b7) endface
+
+object oCube (f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11) solid SLF_HOLLOW endobject
+
+#######################################################
+## Square ring approach 2 x 2 x 2
+
+## Central vertex (movable up and down)
+point c0 (0 {expr  $param(v0)} 0 ) endpoint
+
+# Inner Ring
+ 
+point ir1 (1 {expr  $param(v1)} 1) endpoint
+point ir2 (1 {expr  $param(v1)} -1) endpoint
+point ir3 (-1 {expr  $param(v1)} -1) endpoint
+point ir4 (-1 {expr  $param(v1)} 1) endpoint
+
+# Outer Ring
+point or1 ( {expr 1 + $param(v2)}   {expr  $param(v1)} {expr 1 + $param(v2)}) endpoint
+point or2 ( {expr 1 + $param(v2)}   {expr  $param(v1)} {expr - 1 - $param(v2)}) endpoint
+point or3 ( {expr - 1 - $param(v2)} {expr  $param(v1)} {expr - 1 - $param(v2)}) endpoint
+point or4 ( {expr - 1 - $param(v2)} {expr  $param(v1)} {expr 1 + $param(v2)}) endpoint
+
+# Outer Ring Lower Vertices
+
+point orl1 ( {expr 1 + $param(v2)}   0 {expr 1 + $param(v2)}) endpoint
+point orl2 ( {expr 1 + $param(v2)}   0 {expr - 1 - $param(v2)}) endpoint
+point orl3 ( {expr - 1 - $param(v2)} 0 {expr - 1 - $param(v2)}) endpoint
+point orl4 ( {expr - 1 - $param(v2)} 0 {expr 1 + $param(v2)}) endpoint
+
+
+face rf0 (c0 ir1 ir2) endface
+face rf1 (c0 ir2 ir3) endface
+face rf2 (c0 ir3 ir4) endface
+face rf3 (c0 ir4 ir1) endface
+
+face rf4 (ir1 or1 or2 ir2) endface
+face rf5 (ir2 or2 or3 ir3) endface
+face rf6 (ir3 or3 or4 ir4) endface
+face rf7 (ir4 or4 or1 ir1) endface
+
+face rf8 (or1 orl1 orl2 or2) endface
+face rf9 (or2 orl2 orl3 or3) endface
+face rf10 (or3 orl3 orl4 or4) endface
+face rf11 (or4 orl4 orl1 or1) endface
+
+object oSquareRing (rf0 rf1 rf2 rf3 rf4 rf5 rf6 rf7 rf8 rf9 rf10 rf11) endobject
+
+group gSquareRing
+	instance oSquareRing
+	endinstance
+	instance oSquareRing
+		rotate (1 0 0) (180)
+	endinstance
+endgroup
+
+
+################# SUBDIVISION ########################################
+
+subdivision oSubdivSurf
+
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)+1  }
+  errormetric {expr $oSubdivision(errormetric)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawcurrent {expr $oSubdivision(drawcurrent)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+  vknots {expr $oSubdivision(a)}
+  vorder {expr $oSubdivision(b)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+  instance gSquareRing
+    surface GRN
+  endinstance
+
+endsubdivision
+
+#######################################################
+offset oOffset1
+ 
+  lod {expr $oOffset1(lod)}
+  shading {expr $oOffset1(shading)}
+  type {expr $oOffset1(type)}
+  height {expr $oOffset1(height)}
+  width  {expr $oOffset1(width)}
+  drawcontrols {expr $oOffset1(drawcontrols)}
+
+  instance oSubdivSurf
+  endinstance
+endoffset
+#######################################################
+
+group assembly
+  #instance gSquareRing
+  instance oOffset1
+
+    surface RED
+    scale(0.3 0.3 0.3)
+  endinstance 
+endgroup
+
+#####   include "viewing.slf"
+# A generic setup for viewing SLF objects
+##########################################
+
+light amb
+  type SLF_AMBIENT
+  color (0.2 0.2 0.2)
+endlight
+
+light sun
+  type SLF_DIRECTIONAL
+  color (0.8 0.8 0.8)
+endlight
+
+light anti_sun
+  type SLF_DIRECTIONAL
+  color (0.4 0.4 0.4)
+endlight
+
+group world
+  instance assembly   
+    scale ( 0.1 0.1 0.1 )
+  endinstance
+
+  instance amb
+    id main_amb
+  endinstance
+  instance sun
+    id front_sun
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+  instance anti_sun
+    id back_sun
+    rotate (1 0 0) (180)
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+endgroup
+
+camera cam
+   projection SLF_PERSPECTIVE
+  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 -0.01)
+endcamera
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0.0 0.0 1 )
+  endinstance
+endgroup
+
+window Window
+  background (1 1 1)
+endwindow
+
+viewport vp Window
+endviewport
+
+render vp gCam.iCam.cam world 
+  light world.front_sun.sun
+  light world.back_sun.anti_sun
+  light world.main_amb.amb
+endrender

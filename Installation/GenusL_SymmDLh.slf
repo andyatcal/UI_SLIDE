@@ -1,0 +1,191 @@
+##################################################
+# __GenusL_DLh.slf
+# DLh-symmetry generator for 284 assignment
+# example for 5-fold symmetry
+# CHS 2006/10/20
+###################################################
+
+tclinit {
+  package require slideui
+}
+
+tclinit { 
+  source SLIDEUI.tcl
+  set winName .slfWindow
+  proc CreateParamUI { parent name } {
+    set subname "slf_[subst $name]"
+    if { $parent == {} } {
+      set root .$subname
+    } elseif { $parent == "." } {
+      set root .$subname
+    } else {
+      set root $parent.$subname
+    }
+    toplevel $root
+
+    label $root.v0Label -text "vertex0: x / x / z"
+    scale $root.x0 -from 0.0 -to 1.5 -orient horizontal -resolution 0.01 -variable x0
+    global x0
+    set x0 1.0
+    scale $root.y0 -from 0.0 -to 1.5 -orient horizontal -resolution 0.01 -variable y0
+    global y0
+    set y0 0.5
+    scale $root.z0 -from 0.0 -to 1.5 -orient horizontal -resolution 0.01 -variable z0
+    global z0
+    set z0 0.0
+    
+    grid $root.v0Label  -row 1 -col 0 -padx 10 -pady 10 -sticky e,w
+    grid $root.x0       -row 1 -col 1
+    grid $root.y0       -row 1 -col 2
+    grid $root.z0       -row 1 -col 3
+  
+    label $root.v1Label -text "vertex1: x / x / z"
+    scale $root.x1 -from 0.0 -to 1.5 -orient horizontal -resolution 0.01 -variable x1
+    global x1
+    set x1 0.3
+    scale $root.y1 -from 0.0 -to 1.5 -orient horizontal -resolution 0.01 -variable y1
+    global y1
+    set y1 0.0
+    scale $root.z1 -from 0.0 -to 1.5 -orient horizontal -resolution 0.01 -variable z1
+    global z1
+    set z1 0.3
+    
+    grid $root.v1Label  -row 2 -col 0 -padx 10 -pady 10 -sticky e,w
+    grid $root.x1       -row 2 -col 1
+    grid $root.y1       -row 2 -col 2
+    grid $root.z1       -row 2 -col 3
+
+    wm geometry $root +10+230
+  }
+  CreateParamUI $winName param
+}
+
+
+############ FUNDAMENTAL DOMAIN GEOMETRY ##############################
+###########  Your polygons go here .......
+###########  Keep all geometry in +++octant
+
+## some random quads as place holders ...
+point v0 ( {expr  $x0}  {expr  $y0}  0 ) endpoint
+point v1 ( {expr  $x1}  0  {expr  $z1} ) endpoint
+point v2 ( {expr 0.3*0.80901} {expr 0.3*0.58779} 0) endpoint  ## sin and cos of 36 degrees for 5-fold symmetry
+point v3 ( 1.0 0 0.3) endpoint
+point v4 ( {expr 0.3*0.80901} {expr 0.3*0.58779} 0.6) endpoint
+point v5 ( 0.3 0 0.6) endpoint
+
+## use 3-5 quads or twice as many triangles
+face f1 (v0 v2 v1 v3) endface
+face f2 (v1 v2 v4 v5) endface
+
+object funDomain ( f1 f2 )
+  #  solid SLF_HOLLOW   ##  you may make backfaces visible during initial construction
+                        ##  but turn it off for final checking of face orientations !
+endobject
+
+###########  And this is it for the fundamental domain !
+#######################################################################
+
+mirror mirDomain
+  instance funDomain scale (1 1 -1) endinstance
+endmirror
+
+group oneHandle
+  instance funDomain
+    surface YEL
+  endinstance
+  instance funDomain
+    surface RED
+    rotate (1 0 0) (180)
+  endinstance
+  instance mirDomain
+    surface GRN
+  endinstance
+  instance mirDomain
+    surface BLU
+    rotate (1 0 0) (180)
+  endinstance
+endgroup
+
+################################################################################################
+####  ADjust this to your L-value  #############################################################
+
+group gWholeMesh
+  instance oneHandle   endinstance
+  instance oneHandle  rotate(0 0 1)(72)  endinstance  ## rotate by appropriate fraction 360/L
+  instance oneHandle  rotate(0 0 1)(-72)  endinstance  ## rotate by appropriate fraction 360/L
+ ## replicate L times at equal angular intervals ...
+endgroup
+
+################################################################################################
+
+surface RED color ( 0.8 0.2 0.4 ) endsurface
+surface YEL color ( 1 0.8 0.2 ) endsurface
+surface GRN color ( 0 1 0 ) endsurface
+surface CYN color ( 0 0 1 ) endsurface
+surface BLU color ( 0 0 1 ) endsurface
+surface MAG color ( 1 0 1 ) endsurface
+surface WHT color ( 1 1 1 ) endsurface
+surface DRK color ( 0.3 0.3 0.3 ) endsurface
+
+###############################################
+
+group gWorld
+  instance gWholeMesh   scale( 0.2 0.2 0.2 )  endinstance
+
+  instance amb
+    id main_amb
+  endinstance
+  instance sun
+    id front_sun
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+  instance anti_sun
+    id back_sun
+    rotate (1 0 0) (180)
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+endgroup
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0.0 0.0 1 )
+  endinstance
+endgroup
+
+camera cam
+  #projection SLF_PARALLEL
+  projection SLF_PERSPECTIVE
+  #frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 -0.01)
+  frustum ( -0.2 -0.2 -2.0 ) ( 0.2 0.2 -0.01)
+endcamera
+
+light amb
+  type SLF_AMBIENT
+  color (0.3 0.3 0.3)
+endlight
+
+light sun
+  type SLF_DIRECTIONAL
+  color (0.7 0.7 0.7)
+endlight
+
+light anti_sun
+  type SLF_DIRECTIONAL
+  color (0.2 0.2 0.2)
+endlight
+
+window Window
+  background (0.3 0.6 0.9)
+endwindow
+
+viewport vp Window
+endviewport
+
+render vp gCam.iCam.cam gWorld 
+  light gWorld.front_sun.sun
+  light gWorld.back_sun.anti_sun
+  light gWorld.main_amb.amb
+endrender

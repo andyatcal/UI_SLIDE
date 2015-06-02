@@ -1,0 +1,890 @@
+############################################################################
+# GearMovie -- originally by Jane Yen
+# CHS 4/7/02 
+############################################################################
+ 
+tclinit {
+
+  ### Sliders
+
+  set winName .slfWINDOW
+
+  source MATH.tcl
+  source MOVIE.tcl
+  source SLFCONSTS.tcl
+  source SLIDEUI.tcl
+
+  proc CreateShadingUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+    wm geometry $root +320+65
+
+    set shadingFrame [CreateShadingFrame $name $root]
+
+    pack $shadingFrame -side left -fill y
+  }
+
+  proc CreateGearUI { parent name } {
+
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+      set root .$subname
+    } elseif { $parent == "." } {
+      set root .$subname
+    } else {
+      set root $parent.$subname
+    }
+
+    toplevel $root
+
+    label       $root.pressureAngleLabel -text "pressure angle:" 
+    radiobutton $root.pressureAngle20 -variable gear_pAngle -text "20 degs" -value 20 \
+	-command "UpdateGear both foo"
+    radiobutton $root.pressureAngle25 -variable gear_pAngle -text "25 degs" -value 25 \
+	-command "UpdateGear both foo"
+
+    global gear_pAngle
+    set gear_pAngle 20
+
+    label $root.lTeethLabel -text "number of teeth:"
+    scale $root.lTeeth -from 8 -to 40 -tickinterval 32 -orient horizontal \
+	-variable gear_lTeeth -command "UpdateGear left"
+
+    scale $root.rTeeth -from 8 -to 40 -tickinterval 32 -orient horizontal \
+	-variable gear_rTeeth -command "UpdateGear right"
+   
+    label $root.speedLabel -text "gear turn speed:"
+    scale $root.speed -from 1.0 -to 50.0 -tickinterval 49 -orient horizontal \
+	-resolution 0.5	-variable gear_speed
+
+    global gear_speed
+    set gear_speed 10
+
+    label $root.thicknessLabel -text "gear thickness:"
+    scale $root.thickness -from 0.1 -to 10.0 -tickinterval 9.9 -orient horizontal \
+	-resolution 0.1 -variable gear_thickness
+
+    global gear_thickness
+    set gear_thickness 2.0
+
+    label       $root.turnLabel -text "turn direction:" 
+    radiobutton $root.turnCC -variable gear_turn -text "Downward" -value -1
+    radiobutton $root.turnC  -variable gear_turn -text "Upward"   -value  1
+
+    global gear_turn
+    set gear_turn 1
+
+    grid $root.pressureAngleLabel -row 0 -col 0 -padx 10 -pady 10 -sticky e,w
+    grid $root.pressureAngle20    -row 0 -col 1
+    grid $root.pressureAngle25    -row 0 -col 2
+    grid $root.lTeethLabel        -row 1 -col 0
+    grid $root.lTeeth             -row 1 -col 1 -padx 10 
+    grid $root.rTeeth             -row 1 -col 2 -padx 10 
+    grid $root.thicknessLabel     -row 2 -col 0
+    grid $root.thickness          -row 2 -col 1 -padx 10 -columnspan 2 -sticky e,w
+    grid $root.speedLabel         -row 3 -col 0
+    grid $root.speed              -row 3 -col 1 -padx 10 -columnspan 2 -sticky e,w
+    grid $root.turnLabel          -row 4 -col 0 -padx 10 -pady 10 -sticky e,w
+    grid $root.turnC              -row 4 -col 1
+    grid $root.turnCC             -row 4 -col 2
+
+    wm geometry $root +10+230
+  }
+
+  CreateGearUI $winName gearf
+  CreateShadingUI $winName gRoot 
+  CreateMovieUI $winName rib 0 5000 75 600
+}
+
+############################################################################
+# Tcl Procedures
+############################################################################
+
+tclinit {
+
+  proc RotateZ { theta x y } {
+
+    set cos_theta [expr cos($theta)]
+    set sin_theta [expr sin($theta)]
+
+    set xx [expr $x*$cos_theta - $y*$sin_theta]
+    set yy [expr $x*$sin_theta + $y*$cos_theta]
+
+    set xy "$xx $yy"
+    return $xy
+  }
+}
+
+tclinit {
+
+  proc DeleteGear { wheel } { 
+    global n m SLF_PI
+
+    if { $wheel == "left" } {
+      global gear_lTeeth
+      global lPitchRadius lBaseRadius lAddendumRadius lDedendumRadius
+      global lCurrentTeeth 
+      global dedendumPoints1_LEFT dedendumFaces1_LEFT cogPoints1_LEFT cogFaces1_LEFT
+      global dedendumPoints2_LEFT dedendumFaces2_LEFT cogPoints2_LEFT cogFaces2_LEFT
+      global cogThFaces_LEFT wheelThFaces_LEFT
+      set currentTeeth $lCurrentTeeth
+      set suffix "_LEFT"
+    } else {
+      global gear_rTeeth
+      global rPitchRadius rBaseRadius rAddendumRadius rDedendumRadius
+      global rCurrentTeeth 
+      global dedendumPoints1_RIGHT dedendumFaces1_RIGHT cogPoints1_RIGHT cogFaces1_RIGHT
+      global dedendumPoints2_RIGHT dedendumFaces2_RIGHT cogPoints2_RIGHT cogFaces2_RIGHT
+      global cogThFaces_RIGHT wheelThFaces_RIGHT
+      set currentTeeth $rCurrentTeeth
+      set suffix "_RIGHT"
+    }    
+
+    puts "********** DeleteGear: $wheel"
+
+    if { $currentTeeth == 0 } {
+      return
+    }
+
+    set dedendumFaces1  dedendumFaces1[subst $suffix]
+    set dedendumPoints1 dedendumPoints1[subst $suffix]
+    set cogFaces1       cogFaces1[subst $suffix]
+    set cogPoints1      cogPoints1[subst $suffix]
+
+    set dedendumFaces2  dedendumFaces2[subst $suffix]
+    set dedendumPoints2 dedendumPoints2[subst $suffix]
+    set cogFaces2       cogFaces2[subst $suffix]
+    set cogPoints2      cogPoints2[subst $suffix]
+
+    set cogThFaces      cogThFaces[subst $suffix]
+    set wheelThFaces    wheelThFaces[subst $suffix]
+
+
+    slide delete group gCog[subst $suffix]
+
+    slide delete object oWheelCircle1[subst $suffix]
+    slide delete object oWheelCircle2[subst $suffix]
+    slide delete object oCog1[subst $suffix]
+    slide delete object oCog2[subst $suffix]
+    slide delete object oThCog[subst $suffix]
+    slide delete object oThWheel[subst $suffix]
+
+    ### faces
+    eval "set temp $$dedendumFaces1"
+    foreach f $temp {
+      slide delete face $f
+      #puts "slide delete face $f"
+    }
+    eval "set temp $$dedendumFaces2"
+    foreach f $temp {
+      slide delete face $f
+      #puts "slide delete face $f"
+    }
+    eval "set temp $$cogFaces1"
+    foreach f $temp {
+      slide delete face $f
+      #puts "slide delete face $f"
+    }
+    eval "set temp $$cogFaces2"
+    foreach f $temp {
+      slide delete face $f
+      #puts "slide delete face $f"
+    }
+    eval "set temp $$cogThFaces"
+    foreach f $temp {
+      slide delete face $f
+      #puts "slide delete face $f"
+    }
+    eval "set temp $$wheelThFaces"
+    foreach f $temp {
+      slide delete face $f
+      #puts "slide delete face $f"
+    }
+
+    ### points
+    eval "set temp $$dedendumPoints1"
+    foreach pt $temp {
+      slide delete point $pt
+      #puts "slide delete point $pt"
+    }
+    eval "set temp $$dedendumPoints2"
+    foreach pt $temp {
+      slide delete point $pt
+      #puts "slide delete point $pt"
+    }
+    eval "set temp $$cogPoints1"
+    foreach pt $temp {
+      slide delete point $pt
+      #puts "slide delete point $pt"
+    }
+    eval "set temp $$cogPoints2"
+    foreach pt $temp {
+      slide delete point $pt
+      #puts "slide delete point $pt"
+    }
+  }
+
+  proc CreateGear { wheel } {
+    global n m SLF_PI gear_thickness
+
+    if { $wheel == "left" } {
+      global lCurrentTeeth gear_lTeeth
+      global lPitchRadius lBaseRadius lDedendumRadius lCircularPitch lPhiDelta 
+      global dedendumPoints1_LEFT dedendumFaces1_LEFT cogPoints1_LEFT cogFaces1_LEFT
+      global instances1_LEFT 
+      global dedendumPoints2_LEFT dedendumFaces2_LEFT cogPoints2_LEFT cogFaces2_LEFT
+      global instances2_LEFT
+      global cogThFaces_LEFT wheelThFaces_LEFT
+ 
+      set currentTeeth   $lCurrentTeeth
+      set newTeeth       $gear_lTeeth
+      set pitchRadius    $lPitchRadius
+      set baseRadius     $lBaseRadius
+      set dedendumRadius $lDedendumRadius
+      set circularPitch  $lCircularPitch
+      set phiDelta       $lPhiDelta
+
+      set suffix "_LEFT"
+
+    } else {
+      global rCurrentTeeth gear_rTeeth
+      global rPitchRadius rBaseRadius rDedendumRadius rCircularPitch rPhiDelta 
+      global dedendumPoints1_RIGHT dedendumFaces1_RIGHT cogPoints1_RIGHT cogFaces1_RIGHT
+      global instances1_RIGHT
+      global dedendumPoints2_RIGHT dedendumFaces2_RIGHT cogPoints2_RIGHT cogFaces2_RIGHT
+      global instances2_RIGHT
+      global cogThFaces_RIGHT wheelThFaces_RIGHT
+
+      set currentTeeth   $rCurrentTeeth
+      set newTeeth       $gear_rTeeth
+      set pitchRadius    $rPitchRadius
+      set baseRadius     $rBaseRadius
+      set dedendumRadius $rDedendumRadius
+      set circularPitch  $rCircularPitch
+      set phiDelta       $rPhiDelta
+
+      set suffix "_RIGHT"
+    }
+
+    DeleteGear $wheel
+    puts "Called CreateGear: $wheel  $currentTeeth -> $newTeeth"
+    if { $wheel == "left" } {
+      set lCurrentTeeth $gear_lTeeth
+      set currentTeeth   $lCurrentTeeth
+    } else {
+      set rCurrentTeeth $gear_rTeeth
+      set currentTeeth   $rCurrentTeeth
+    }
+
+    set d   [expr $baseRadius*sqrt( 2.0*(1.0-cos($phiDelta))) ]
+    set teeth $currentTeeth
+    set slices 5
+    set dName 1
+    set cName 1
+    set fcName 1
+    set iName 1
+    set tcName 1
+    set twName 1
+
+    set dedendumPoints1 dedendumPoints1[subst $suffix]
+    set dedendumFaces1  dedendumFaces1[subst $suffix]
+    set cogPoints1      cogPoints1[subst $suffix]
+    set cogFaces1       cogFaces1[subst $suffix]
+    set instances1      instances1[subst $suffix]
+    set $dedendumPoints1 ""
+    set $dedendumFaces1  ""
+    set $cogPoints1      ""
+    set $cogFaces1       ""
+    set $instances1      ""
+
+    set dedendumPoints2 dedendumPoints2[subst $suffix]
+    set dedendumFaces2  dedendumFaces2[subst $suffix]
+    set cogPoints2      cogPoints2[subst $suffix]
+    set cogFaces2       cogFaces2[subst $suffix]
+    set instances2      instances2[subst $suffix]
+    set $dedendumPoints2 ""
+    set $dedendumFaces2  ""
+    set $cogPoints2      ""
+    set $cogFaces2       ""
+    set $instances2      ""
+
+    set cogThFaces       cogThFaces[subst $suffix]
+    set wheelThFaces     wheelThFaces[subst $suffix]
+    set $cogThFaces      ""
+    set $wheelThFaces    ""
+
+    set theta 0
+    set thetaDelta [expr 2.0*$SLF_PI / $teeth];
+
+    #####################################################
+    ### Cog
+
+    set pPitchDelta [expr acos( 1.0 + (1.0/(2.0*$n*$n)) * (1.0 - ($pitchRadius*$pitchRadius)/($baseRadius*$baseRadius)) )] 
+    set pPitch      [expr $n*$pPitchDelta]
+    set dd     [expr $baseRadius*sqrt( 2.0*(1.0-cos($pPitchDelta)))]
+    set x      [expr $baseRadius*cos($pPitch) + $n*$dd*sin($pPitch)]
+    set y      [expr $baseRadius*sin($pPitch) - $n*$dd*cos($pPitch)]
+    set tPitch [expr atan($y/$x)]
+
+    set tAngle  [expr $circularPitch/(2.0*$pitchRadius)]
+
+    set t      [expr $theta]
+    set t2     [expr $theta + $tAngle/2.0]
+    set tMin   [expr 2*$tPitch + $SLF_PI/$teeth]
+    set tMax   [expr $theta + $thetaDelta]
+    set tDelta [expr ($tMax-$tMin)/($slices)]
+
+    ### Points
+      
+    ### pLD1
+    set name1 pD[subst $dName][subst $suffix]
+    set temp [eval "concat $$dedendumPoints1 $name1"]
+    set $dedendumPoints1 $temp
+    set name2 ppD[subst $dName][subst $suffix]
+    set temp [eval "concat $$dedendumPoints2 $name2"]
+    set $dedendumPoints2 $temp
+    incr dName
+    set x [expr $dedendumRadius*cos($t)]
+    set y [expr $dedendumRadius*sin($t)]
+#    eval "slide create point $name1 { {expr $x} {expr $y} {expr $ht} }"
+#    eval "slide create point $name2 { {expr $x} {expr $y} {expr -$ht} }"
+    slide create point $name1 \
+	[list \
+	  [list expr $x] [list expr $y] [list expr { $gear_thickness } /2.0] \
+        ]
+    slide create point $name2 \
+	[list \
+	  [list expr $x] [list expr $y] [list expr { -$gear_thickness } /2.0] \
+        ]
+
+    set nameD1 $name1
+    set nameDD1 $name2
+
+    ### pLD2
+    set name1 pD[subst $dName][subst $suffix]
+    set temp [eval "concat $$dedendumPoints1 $name1"]
+    set $dedendumPoints1 $temp
+    set name2 ppD[subst $dName][subst $suffix]
+    set temp [eval "concat $$dedendumPoints2 $name2"]
+    set $dedendumPoints2 $temp
+    incr dName
+    set x [expr $dedendumRadius*cos($t2)]
+    set y [expr $dedendumRadius*sin($t2)]
+#    eval "slide create point $name1 { {expr $x} {expr $y} {expr $ht} }"
+#    eval "slide create point $name2 { {expr $x} {expr $y} {expr -$ht} }"
+    slide create point $name1 \
+	[list \
+	  [list expr $x] [list expr $y] [list expr { $gear_thickness } /2.0] \
+        ]
+    slide create point $name2 \
+	[list \
+	  [list expr $x] [list expr $y] [list expr { -$gear_thickness } /2.0] \
+        ]
+    set nameD2 $name1
+    set nameDD2 $name2
+
+    ### pLD3
+    set name1 pD[subst $dName][subst $suffix]
+    set temp [eval "concat $$dedendumPoints1 $name1"]
+    set $dedendumPoints1 $temp
+    set name2 ppD[subst $dName][subst $suffix]
+    set temp [eval "concat $$dedendumPoints2 $name2"]
+    set $dedendumPoints2 $temp
+    incr dName
+    set x [expr $dedendumRadius*cos($tMin)]
+    set y [expr $dedendumRadius*sin($tMin)]
+#    eval "slide create point $name1 { {expr $x} {expr $y} {expr $ht} }"
+#    eval "slide create point $name2 { {expr $x} {expr $y} {expr -$ht} }"
+    slide create point $name1 \
+	[list \
+	  [list expr $x] [list expr $y] [list expr { $gear_thickness } /2.0] \
+        ]
+    slide create point $name2 \
+	[list \
+	  [list expr $x] [list expr $y] [list expr { -$gear_thickness } /2.0] \
+        ]
+
+    set nameD3 $name1
+    set nameDD3 $name2
+
+    ### pLD4->pLDslices+1
+    for {set j 1} {$j <= $slices} {incr j} {
+
+      set angle [expr $tMin + $j*$tDelta]
+
+      set name1 pD[subst $dName][subst $suffix]
+      set temp [eval "concat $$dedendumPoints1 $name1"]
+      set $dedendumPoints1 $temp
+      set name2 ppD[subst $dName][subst $suffix]
+      set temp [eval "concat $$dedendumPoints2 $name2"]
+      set $dedendumPoints2 $temp
+      incr dName
+      set x [expr $dedendumRadius*cos($angle)]
+      set y [expr $dedendumRadius*sin($angle)]
+      #eval "slide create point $name1 { {expr $x} {expr $y} {expr $ht} }"
+      #eval "slide create point $name2 { {expr $x} {expr $y} {expr -$ht} }"
+      slide create point $name1 \
+	[list \
+	  [list expr $x] [list expr $y] [list expr { $gear_thickness } /2.0] \
+        ]
+      slide create point $name2 \
+	[list \
+	  [list expr $x] [list expr $y] [list expr { -$gear_thickness } /2.0] \
+        ]
+    }
+
+    ### pI1->pIn+1 and Mirror
+    set thisCogPoints1 "" 
+    set thisReverseCogPoints1 "" 
+    set thisCogPoints2 "" 
+    set thisReverseCogPoints2 "" 
+
+    set thisCogPoints1 [concat $thisCogPoints1 "$nameD1"]
+    set thisCogPoints2 [concat $thisCogPoints2 "$nameDD1"]
+
+    set phi [expr $t+$phiDelta]
+
+    for {set j 1} {$j <= $n} {incr j} {      
+
+      set name1 pI[subst $cName][subst $suffix]
+      set temp [eval "concat $$cogPoints1 $name1"]
+      set $cogPoints1 $temp
+      set name2 ppI[subst $cName][subst $suffix]
+      set temp [eval "concat $$cogPoints2 $name2"]
+      set $cogPoints2 $temp
+
+      set thisCogPoints1 [concat $thisCogPoints1 "$name1"]
+      set thisCogPoints2 [concat $thisCogPoints2 "$name2"]
+      set x [expr $baseRadius*cos($phi) + $j*$d*sin($phi)]
+      set y [expr $baseRadius*sin($phi) - $j*$d*cos($phi)]
+      #eval "slide create point $name1 { {expr $x} {expr $y} {expr $ht} }"
+      #eval "slide create point $name2 { {expr $x} {expr $y} {expr -$ht} }"
+      slide create point $name1 \
+	[list \
+	  [list expr $x] [list expr $y] [list expr { $gear_thickness } /2.0] \
+        ]
+      slide create point $name2 \
+	[list \
+	  [list expr $x] [list expr $y] [list expr { -$gear_thickness } /2.0] \
+        ]
+
+      set name1 pIp[subst $cName][subst $suffix]
+      set temp [eval "concat $$cogPoints1 $name1"]
+      set $cogPoints1 $temp
+      set name2 ppIp[subst $cName][subst $suffix]
+      set temp [eval "concat $$cogPoints2 $name2"]
+      set $cogPoints2 $temp
+      set thisReverseCogPoints1 [concat $thisReverseCogPoints1 "$name1"]
+      set thisReverseCogPoints2 [concat $thisReverseCogPoints2 "$name2"]
+      set xy [RotateZ -$t $x $y]
+      set x  [lindex $xy 0]
+      set y  [lindex $xy 1]
+      set y  [expr -$y]
+      set angle  [expr $t+$tMin]
+      set xy [RotateZ $angle $x $y]
+      set x  [lindex $xy 0]
+      set y  [lindex $xy 1]
+      #eval "slide create point $name1 { {expr $x} {expr $y} {expr $ht} }"
+      #eval "slide create point $name2 { {expr $x} {expr $y} {expr -$ht} }"
+      slide create point $name1 \
+	[list \
+	  [list expr $x] [list expr $y] [list expr { $gear_thickness } /2.0] \
+        ]
+      slide create point $name2 \
+	[list \
+	  [list expr $x] [list expr $y] [list expr { -$gear_thickness } /2.0] \
+        ]
+
+       incr cName
+       set phi [expr $phi + $phiDelta]
+    }
+
+    ### Faces
+
+    set len [llength $thisCogPoints1]
+    for {set j 1} {$j < $len} {incr j} {
+
+       set index [expr $len-$j-1]
+       set name1 [lindex $thisReverseCogPoints1 $index]
+       set thisCogPoints1 [concat $thisCogPoints1 "$name1"]
+
+       set name2 [lindex $thisReverseCogPoints2 $index]
+       set thisCogPoints2 [concat $thisCogPoints2 "$name2"]
+    }
+    set thisCogPoints1 [concat $thisCogPoints1 "$nameD3"]
+    set thisCogPoints2 [concat $thisCogPoints2 "$nameDD3"]
+
+
+    set len [llength $thisCogPoints1]
+    for {set j 0} {$j < $len-1} {incr j} {
+
+       set pt1 [lindex $thisCogPoints1 $j]
+       set pt2 [lindex $thisCogPoints1 [expr $j+1]]
+
+       set name1 fI[subst $fcName][subst $suffix]
+       set temp [eval "concat $$cogFaces1 $name1"]
+       set $cogFaces1 $temp
+         
+       set pts "$nameD2 $pt1 $pt2"
+       slide create face $name1 $pts
+
+       ###########
+       
+       set pt1 [lindex $thisCogPoints2 $j]
+       set pt2 [lindex $thisCogPoints2 [expr $j+1]]
+
+       set name2 ffI[subst $fcName][subst $suffix]
+       set temp [eval "concat $$cogFaces2 $name2"]
+       set $cogFaces2 $temp
+         
+       set pts "$nameDD2 $pt2 $pt1"
+       slide create face $name2 $pts
+
+       incr fcName
+    }
+
+    ### between cogs
+
+    set len [llength $thisCogPoints1]
+    for {set j 0} {$j < $len-1} {incr j} {
+
+       set p1 [lindex $thisCogPoints1 $j]
+       set p2 [lindex $thisCogPoints1 [expr $j+1]]
+
+       set pp1 [lindex $thisCogPoints2 $j]
+       set pp2 [lindex $thisCogPoints2 [expr $j+1]]
+
+       set name fTC[subst $tcName][subst $suffix]
+       set temp [eval "concat $$cogThFaces $name"]
+       set $cogThFaces $temp
+       incr tcName
+       set pts "$p1 $pp1 $p2"
+       slide create face $name $pts
+
+       set name fTC[subst $tcName][subst $suffix]
+       set temp [eval "concat $$cogThFaces $name"]
+       set $cogThFaces $temp
+       incr tcName
+       set pts "$p2 $pp1 $pp2"
+       slide create face $name $pts
+    }
+
+    ### wheel
+
+    eval "set dPoints1 $$dedendumPoints1"
+    eval "set dPoints2 $$dedendumPoints2"
+    set len [llength $dPoints1]
+
+    for {set i 0} {$i < $len-1} {incr i } {
+
+      set pt1 [lindex $dPoints1 $i]
+      set pt2 [lindex $dPoints1 [expr $i+1]]
+
+      set name1 fD[subst $dName][subst $suffix]
+      set temp [eval "concat $$dedendumFaces1 $name1"]
+      set $dedendumFaces1 $temp
+      set pts "pCenter $pt1 $pt2"
+      slide create face $name1 $pts
+
+      ####
+
+      set pt1 [lindex $dPoints2 $i]
+      set pt2 [lindex $dPoints2 [expr $i+1]]
+
+      set name2 ffD[subst $dName][subst $suffix]
+      set temp [eval "concat $$dedendumFaces2 $name2"]
+      set $dedendumFaces2 $temp
+      set pts "ppCenter $pt2 $pt1"
+      slide create face $name2 $pts
+
+      incr dName
+    }    
+
+    ### between wheels
+
+    for {set i 0} {$i < $len-1} {incr i } {
+
+      if { ($i != 0) && ($i != 1) } {
+
+        set p1 [lindex $dPoints1 $i]
+        set p2 [lindex $dPoints1 [expr $i+1]]
+
+        set pp1 [lindex $dPoints2 $i]
+        set pp2 [lindex $dPoints2 [expr $i+1]]
+
+        set name fTW[subst $twName][subst $suffix]
+        set temp [eval "concat $$wheelThFaces $name"]
+        set $wheelThFaces $temp
+        incr twName
+        set pts "$p1 $pp1 $p2"
+        slide create face $name $pts
+
+        set name fTW[subst $twName][subst $suffix]
+        set temp [eval "concat $$wheelThFaces $name"]
+        set $wheelThFaces $temp
+        incr twName
+        set pts "$p2 $pp1 $pp2"
+        slide create face $name $pts
+      }
+    }    
+
+    eval "slide create object oWheelCircle1[subst $suffix] $$dedendumFaces1"
+    eval "slide create object oWheelCircle2[subst $suffix] $$dedendumFaces2"
+    eval "slide create object oCog1[subst $suffix] $$cogFaces1"
+    eval "slide create object oCog2[subst $suffix] $$cogFaces2"
+
+    eval "slide create object oThCog[subst $suffix] $$cogThFaces"
+    eval "slide create object oThWheel[subst $suffix] $$wheelThFaces"
+
+
+    ### Group cog
+    slide create group gCog[subst $suffix]
+
+    eval "slide create instance i1 gCog[subst $suffix] oWheelCircle1[subst $suffix] "
+    eval "slide create instance i2 gCog[subst $suffix] oWheelCircle2[subst $suffix] "
+    eval "slide create instance i3 gCog[subst $suffix] oThWheel[subst $suffix] "
+    eval "slide create instance i4 gCog[subst $suffix] oCog1[subst $suffix] "
+    eval "slide create instance i5 gCog[subst $suffix] oCog2[subst $suffix] "
+    eval "slide create instance i6 gCog[subst $suffix] oThCog[subst $suffix] "
+
+    #####################################################
+   
+    set theta 0
+    set thetaDelta [expr 2.0*$SLF_PI / $teeth];
+
+    for {set i 1} {$i <= $teeth} {incr i} {
+
+      set t [RadToDeg $theta]
+
+      set name1 i[subst $iName][subst $suffix]
+      set temp [eval "concat $$instances1 $name1"]
+      set $instances1 $temp
+      eval "slide create instance $name1 gGear[subst $suffix] gCog[subst $suffix] -xforms { {rotate (0 0 1) $t} }"
+
+      incr iName
+      set theta [expr $theta + $thetaDelta]
+    }
+  }
+  
+  proc UpdateGear { wheel foo } {
+    global SLF_PI
+    global m n rPhi lPhi rPhiDelta lPhiDelta
+    global gear_pAngle gear_lTeeth gear_rTeeth gear_thickness
+    global lCircularPitch rCircularPitch
+    global lPitchRadius rPitchRadius lBaseRadius rBaseRadius a b
+    global rAddendumRadius lAddendumRadius rDedendumRadius lDedendumRadius
+    global loa_x loa_y
+    global offset
+
+    puts "Called UpdateGear"
+
+    ##################
+    ### radii
+
+    set lCircularPitch [expr $SLF_PI*$m]
+    set rCircularPitch [expr $SLF_PI*$m]
+
+    set lPitchRadius [expr $m*$gear_lTeeth/2.0]
+    set rPitchRadius [expr $m*$gear_rTeeth/2.0]
+
+    set lBaseRadius [expr $lPitchRadius * cos( [DegToRad $gear_pAngle] )]
+    set rBaseRadius [expr $rPitchRadius * cos( [DegToRad $gear_pAngle] )]
+
+    set a [expr $m]
+    set b [expr 1.25*$m]
+
+    set rAddendumRadius [expr $a+$rPitchRadius]
+    set lAddendumRadius [expr $a+$lPitchRadius]
+
+    set rDedendumRadius [expr $rPitchRadius-$b]
+    set lDedendumRadius [expr $lPitchRadius-$b]
+
+    ##################
+    ### involute 
+
+    set rPhiDelta [expr acos( 1.0 + (1.0/(2.0*$n*$n)) * (1.0 - ($rAddendumRadius*$rAddendumRadius)/($rBaseRadius*$rBaseRadius)) )]
+
+    set lPhiDelta [expr acos( 1.0 + (1.0/(2.0*$n*$n)) * (1.0 - ($lAddendumRadius*$lAddendumRadius)/($lBaseRadius*$lBaseRadius)) )]
+
+    ##################
+    ### line of action
+
+    set loa_x [expr 50*sin( [DegToRad $gear_pAngle] )]
+    set loa_y [expr 50*cos( [DegToRad $gear_pAngle] )]
+    set offset [expr (57.296*tan($gear_pAngle/57.296)-$gear_pAngle ) ]
+
+    if { $wheel == "both" } {
+
+      CreateGear left
+      CreateGear right
+    } else {
+
+      CreateGear $wheel
+    } 
+  }
+}
+
+############################################################################
+# Tcl Initiation of Global Variables
+############################################################################
+
+tclinit {
+  ### Gear
+  global m n phi
+  global lPitchRadius rPitchRadius lBaseRadius rBaseRadius a b
+  global gear_pAngle gear_lTeeth gear_rTeeth gear_thickness
+  global lCurrentTeeth rCurrentTeeth
+
+  set m 1
+  set n 10
+
+  set gear_pAngle 20
+  set gear_lTeeth 10
+  set gear_rTeeth 10
+
+  set lCurrentTeeth 0
+  set rCurrentTeeth 0
+
+  ### create geometry
+  slide create point pCenter  { 0 0 {expr $gear_thickness/2.0} }
+  slide create point ppCenter { 0 0 {expr -$gear_thickness/2.0} }
+
+  UpdateGear left  foo
+  UpdateGear right foo
+}
+
+tclinit {
+
+  proc CreateCircle { } {
+    global SLF_PI
+
+    set slices 50
+    set theta 0
+    set thetaDelta [expr 2*$SLF_PI/$slices]
+
+    set pts ""
+    for {set i 1} {$i <= $slices} {incr i} {
+
+      set name pCircle[subst $i]
+      set pts [concat $pts "$name"]
+
+      set x [expr cos($theta)]
+      set y [expr sin($theta)]
+
+      eval "slide create point $name {$x $y 0}"
+
+      set theta [expr $theta+$thetaDelta] 
+    }
+
+    set pts [concat $pts "pCircle1"]
+    slide create polyline pCircle -pointlist $pts
+  }
+
+   CreateCircle
+}
+
+tclupdate  {
+  MovieUpdate
+}
+
+
+############################################################################
+### SLIDE 
+
+surface sRight  color (0.8 0.4 0.4) endsurface
+surface sLeft  color (0.4 0.4 0.8) endsurface
+surface sBlue  color ( 0 0 1 ) endsurface
+surface sRed  color ( 1 0 0 ) endsurface
+surface sGreen  color ( 0 1 0 ) endsurface
+surface sMagenta  color ( 1 0 1 ) endsurface
+surface sYellow  color ( 1 1 0 ) endsurface
+
+######################################################
+### Geometry
+###
+### This is all filled in by the Tcl code !
+######################################################
+
+group gGear_LEFT
+endgroup
+
+group gGear_RIGHT
+endgroup
+
+group gScene
+  shading {expr $gRoot_shading}
+  instance gGear_LEFT
+    surface sLeft
+    rotate (0 0 1) ({expr $gear_turn*double($gear_speed)*$rib_frame/$gear_lTeeth - $offset})
+    translate ({expr -$lPitchRadius} 0 0)
+  endinstance
+  instance gGear_RIGHT
+    surface sRight
+    rotate (0 0 1) ({expr -$gear_turn*double($gear_speed)*$rib_frame/$gear_rTeeth - $offset + 180})
+    translate ({expr $rPitchRadius} 0 0)
+  endinstance
+endgroup
+
+########################################################################################
+
+light lite
+  type SLF_DIRECTIONAL
+endlight
+
+group gLight
+  instance lite
+    id instLite
+
+    lookat
+      eye ( 0.5 1.0 1.0 )
+      target ( 0.0 0.0 0.0 )
+      up ( 0.0 1.0 0.0 )
+    endlookat
+
+  endinstance
+endgroup
+
+light lite2
+  type SLF_AMBIENT
+  color (0.25 0.25 0.25)
+endlight
+
+group gLight2
+  instance lite2
+    id instLite2
+  endinstance
+endgroup
+
+camera cam
+  projection SLF_PARALLEL
+  frustum ( -20 -20 -100 ) ( 20 20 100 )
+endcamera
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0 0 1 )
+  endinstance
+endgroup
+
+window WINDOW
+  origin (0.35 0.25)
+endwindow
+
+viewport vp WINDOW
+endviewport
+
+render vp gCam.iCam.cam gScene
+  light gLight.instLite.lite
+  light gLight2.instLite2.lite2
+endrender
