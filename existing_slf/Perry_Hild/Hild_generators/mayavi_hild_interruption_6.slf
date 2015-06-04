@@ -1,0 +1,630 @@
+### mayavi_hild_interruption_6.slf
+#   6 - working tr, tu, r, and gap tcl variables
+### Eric Chu 12/18/14
+
+###################################################
+
+tclinit {
+
+  package require slideui
+
+  toplevel .slfWindow.ui
+  CreateSLIDESubdivisionObject oSubdivision
+  set widget [CreateSLIDESubdivisionUI .slfWindow.ui oSubdivision]
+  pack $widget
+
+  toplevel .slfWindow.uiOffset
+  CreateSLIDEOffsetObject oOffset
+  set widget [CreateSLIDEOffsetUI .slfWindow.uiOffset oOffset]
+  pack $widget
+
+}
+
+
+## general links and definitions:
+
+tclinit {
+  set winName .slfWindow
+
+  source SLIDEUI.tcl
+  source MATH.tcl
+
+  set to_rad [expr $SLF_PI/180.0 ]
+  CreateGroupUI $winName gRoot
+}
+
+
+#####  Some elementary geometry   #################
+
+## Coordinate axes:
+point ooo  ( 0 0 0 ) endpoint
+point xoo  ( 1 0 0 ) endpoint
+point oyo  ( 0 1 0 ) endpoint
+point ooz  ( 0 0 1 ) endpoint
+
+polyline xaxis pointlist (ooo xoo) endpolyline
+polyline yaxis pointlist (ooo oyo) endpolyline
+polyline zaxis pointlist (ooo ooz) endpolyline
+
+group coord_axes
+  instance xaxis surface R endinstance
+  instance yaxis surface B endinstance
+  instance zaxis surface G endinstance
+endgroup
+
+###################################################
+
+# a reference cube -- 
+point XYZ  ( 1  1  1 ) endpoint
+point XYC  ( 1  1  -1 ) endpoint
+point XBZ  ( 1  -1  1 ) endpoint
+point XBC  ( 1  -1  -1 ) endpoint
+point AYZ  ( -1  1  1 ) endpoint
+point AYC  ( -1  1  -1 ) endpoint
+point ABZ  ( -1  -1  1 ) endpoint
+point ABC  ( -1  -1  -1 ) endpoint
+
+face c1   (XYZ XBZ XBC XYC ) endface
+face c2   (XYZ XYC AYC AYZ ) endface
+face c3   (AYZ AYC ABC ABZ ) endface
+face c4   (ABZ ABC XBC XBZ ) endface
+face c5   (XYZ AYZ ABZ XBZ ) endface
+face c6   (XYC XBC ABC AYC ) endface
+
+object cube (c1 c2 c3 c4 c5 c6)    solid SLF_HOLLOW   shading SLF_WIRE   endobject
+
+
+###################################################
+tclinit {
+
+            proc CreateFunnelsUI { parent name } {
+            set subname "[subst $name]"
+
+            if { $parent == {} } {
+              set root .$subname
+            } elseif { $parent == "." } {
+              set root .$subname
+            } else {
+              set root $parent.$subname
+            }
+            
+            toplevel $root
+
+    global  f0_r f0_t_r f0_t_u f0_t_n
+
+                label $root.row1Label -text "f0: r, t_r, t_u, t_n"
+                scale $root.f0_r -from  1.0 -to 10.0 -orient horizontal -resolution 0.1 -variable f0_r
+                set f0_r 6.0
+                scale $root.f0_t_r -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable f0_t_r
+                set f0_t_r 0.0
+                scale $root.f0_t_u -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable f0_t_u
+                set f0_t_u 0.0
+                scale $root.f0_t_n -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable f0_t_n
+                set f0_t_n 0.0
+
+                grid $root.row1Label -row 1 -col 0 -padx 10 -pady 10 -sticky e,w
+                grid $root.f0_r -row 1 -col 1
+                grid $root.f0_t_r -row 1 -col 2
+                grid $root.f0_t_u -row 1 -col 3
+                grid $root.f0_t_n -row 1 -col 4
+
+                    wm geometry $root +10+230
+                }
+                CreateFunnelsUI $winName funs
+            }
+
+tclinit {
+
+            proc CreateTunnelsUI { parent name } {
+            set subname "[subst $name]"
+
+            if { $parent == {} } {
+              set root .$subname
+            } elseif { $parent == "." } {
+              set root .$subname
+            } else {
+              set root $parent.$subname
+            }
+            
+            toplevel $root
+
+    global  t0_r t0_t_r t0_t_u t0_t_n t0_gap
+
+                label $root.row1Label -text "t0: r, t_r, t_u, t_n, gap"
+                scale $root.t0_r -from  1.0 -to 10.0 -orient horizontal -resolution 0.1 -variable t0_r
+                set t0_r 2.0
+                scale $root.t0_t_r -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable t0_t_r
+                set t0_t_r 0.0
+                scale $root.t0_t_u -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable t0_t_u
+                set t0_t_u 0.0
+                scale $root.t0_t_n -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable t0_t_n
+                set t0_t_n 0.0
+                scale $root.t0_gap -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable t0_gap
+                set t0_gap 1.0
+
+                grid $root.row1Label -row 1 -col 0 -padx 10 -pady 10 -sticky e,w
+                grid $root.t0_r -row 1 -col 1
+                grid $root.t0_t_r -row 1 -col 2
+                grid $root.t0_t_u -row 1 -col 3
+                grid $root.t0_t_n -row 1 -col 4
+                grid $root.t0_gap -row 1 -col 5
+
+                    wm geometry $root +10+230
+                }
+                CreateTunnelsUI $winName tuns
+            }
+
+tclinit {
+
+            proc CreateCRingsUI { parent name } {
+            set subname "[subst $name]"
+
+            if { $parent == {} } {
+              set root .$subname
+            } elseif { $parent == "." } {
+              set root .$subname
+            } else {
+              set root $parent.$subname
+            }
+            
+            toplevel $root
+
+    global  cr0_r cr0_t_r cr0_t_u cr0_t_n cr0_gap     cr1_r cr1_t_r cr1_t_u cr1_t_n cr1_gap
+
+                label $root.row1Label -text "cr0: r, t_r, t_u, t_n, gap"
+                scale $root.cr0_r -from  1.0 -to 10.0 -orient horizontal -resolution 0.1 -variable cr0_r
+                set cr0_r 2.4
+                scale $root.cr0_t_r -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable cr0_t_r
+                set cr0_t_r -1.8
+                scale $root.cr0_t_u -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable cr0_t_u
+                set cr0_t_u 1.2
+                scale $root.cr0_t_n -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable cr0_t_n
+                set cr0_t_n 0.0
+                scale $root.cr0_gap -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable cr0_gap
+                set cr0_gap 1.5549
+
+                label $root.row2Label -text "cr1: r, t_r, t_u, t_n, gap"
+                scale $root.cr1_r -from  1.0 -to 10.0 -orient horizontal -resolution 0.1 -variable cr1_r
+                set cr1_r 3.2
+                scale $root.cr1_t_r -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable cr1_t_r
+                set cr1_t_r -3.3
+                scale $root.cr1_t_u -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable cr1_t_u
+                set cr1_t_u 1.8
+                scale $root.cr1_t_n -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable cr1_t_n
+                set cr1_t_n 0.0
+                scale $root.cr1_gap -from  -10.0 -to 10.0 -orient horizontal -resolution 0.1 -variable cr1_gap
+                set cr1_gap 1.5549
+
+                grid $root.row1Label -row 1 -col 0 -padx 10 -pady 10 -sticky e,w
+                grid $root.cr0_r -row 1 -col 1
+                grid $root.cr0_t_r -row 1 -col 2
+                grid $root.cr0_t_u -row 1 -col 3
+                grid $root.cr0_t_n -row 1 -col 4
+                grid $root.cr0_gap -row 1 -col 5
+
+                grid $root.row2Label -row 2 -col 0 -padx 10 -pady 10 -sticky e,w
+                grid $root.cr1_r -row 2 -col 1
+                grid $root.cr1_t_r -row 2 -col 2
+                grid $root.cr1_t_u -row 2 -col 3
+                grid $root.cr1_t_n -row 2 -col 4
+                grid $root.cr1_gap -row 2 -col 5
+
+                    wm geometry $root +10+230
+                }
+                CreateCRingsUI $winName crings
+            }
+
+mesh fsurf
+
+vertex p0_0 ({expr 1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*1.0000} {expr 2.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*-0.0000} {expr 0.7679*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*0.0000}) endvertex
+vertex p0_1 ({expr 1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*1.0000} {expr 3.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*-0.0000} {expr 2.5000*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*0.0000}) endvertex
+vertex p0_2 ({expr 1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*1.0000} {expr 2.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*-0.0000} {expr 4.2321*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*0.0000}) endvertex
+vertex p0_3 ({expr 1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*1.0000} {expr 0.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*-0.0000} {expr 4.2321*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*0.0000}) endvertex
+vertex p0_4 ({expr 1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*1.0000} {expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*-0.0000} {expr 2.5000*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*0.0000}) endvertex
+vertex p0_5 ({expr 1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*1.0000} {expr -0.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*-0.0000} {expr 0.7679*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*0.0000}) endvertex
+vertex p0_6 ({expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*-1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*-1.0000} {expr 2.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*0.0000} {expr 0.7679*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*-0.0000}) endvertex
+vertex p0_7 ({expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*-1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*-1.0000} {expr 3.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*0.0000} {expr 2.5000*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*-0.0000}) endvertex
+vertex p0_8 ({expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*-1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*-1.0000} {expr 2.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*0.0000} {expr 4.2321*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*-0.0000}) endvertex
+vertex p0_9 ({expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*-1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*-1.0000} {expr 0.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*0.0000} {expr 4.2321*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*-0.0000}) endvertex
+vertex p0_10 ({expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*-1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*-1.0000} {expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*0.0000} {expr 2.5000*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*-0.0000}) endvertex
+vertex p0_11 ({expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*-1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*-1.0000} {expr -0.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*0.0000} {expr 0.7679*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*-0.0000}) endvertex
+vertex p1_0 ({expr 6.0000*$f0_r/6.0 + (1-$f0_r/6.0)*0+ $f0_t_r*1.0000 + $f0_t_u*0.0000 + $f0_t_n*0.0000} {expr 2.0000*$f0_r/6.0 + (1-$f0_r/6.0)*2+ $f0_t_r*0.0000 + $f0_t_u*1.0000 + $f0_t_n*0.0000} {expr -8.0000*$f0_r/6.0 + (1-$f0_r/6.0)*-8+ $f0_t_r*0.0000 + $f0_t_u*0.0000 + $f0_t_n*1.0000}) endvertex
+vertex p1_1 ({expr 3.0000*$f0_r/6.0 + (1-$f0_r/6.0)*0+ $f0_t_r*1.0000 + $f0_t_u*0.0000 + $f0_t_n*0.0000} {expr 7.1962*$f0_r/6.0 + (1-$f0_r/6.0)*2+ $f0_t_r*0.0000 + $f0_t_u*1.0000 + $f0_t_n*0.0000} {expr -8.0000*$f0_r/6.0 + (1-$f0_r/6.0)*-8+ $f0_t_r*0.0000 + $f0_t_u*0.0000 + $f0_t_n*1.0000}) endvertex
+vertex p1_2 ({expr -3.0000*$f0_r/6.0 + (1-$f0_r/6.0)*0+ $f0_t_r*1.0000 + $f0_t_u*0.0000 + $f0_t_n*0.0000} {expr 7.1962*$f0_r/6.0 + (1-$f0_r/6.0)*2+ $f0_t_r*0.0000 + $f0_t_u*1.0000 + $f0_t_n*0.0000} {expr -8.0000*$f0_r/6.0 + (1-$f0_r/6.0)*-8+ $f0_t_r*0.0000 + $f0_t_u*0.0000 + $f0_t_n*1.0000}) endvertex
+vertex p1_3 ({expr -6.0000*$f0_r/6.0 + (1-$f0_r/6.0)*0+ $f0_t_r*1.0000 + $f0_t_u*0.0000 + $f0_t_n*0.0000} {expr 2.0000*$f0_r/6.0 + (1-$f0_r/6.0)*2+ $f0_t_r*0.0000 + $f0_t_u*1.0000 + $f0_t_n*0.0000} {expr -8.0000*$f0_r/6.0 + (1-$f0_r/6.0)*-8+ $f0_t_r*0.0000 + $f0_t_u*0.0000 + $f0_t_n*1.0000}) endvertex
+vertex p1_4 ({expr -3.0000*$f0_r/6.0 + (1-$f0_r/6.0)*0+ $f0_t_r*1.0000 + $f0_t_u*0.0000 + $f0_t_n*0.0000} {expr -3.1962*$f0_r/6.0 + (1-$f0_r/6.0)*2+ $f0_t_r*0.0000 + $f0_t_u*1.0000 + $f0_t_n*0.0000} {expr -8.0000*$f0_r/6.0 + (1-$f0_r/6.0)*-8+ $f0_t_r*0.0000 + $f0_t_u*0.0000 + $f0_t_n*1.0000}) endvertex
+vertex p1_5 ({expr 3.0000*$f0_r/6.0 + (1-$f0_r/6.0)*0+ $f0_t_r*1.0000 + $f0_t_u*0.0000 + $f0_t_n*0.0000} {expr -3.1962*$f0_r/6.0 + (1-$f0_r/6.0)*2+ $f0_t_r*0.0000 + $f0_t_u*1.0000 + $f0_t_n*0.0000} {expr -8.0000*$f0_r/6.0 + (1-$f0_r/6.0)*-8+ $f0_t_r*0.0000 + $f0_t_u*0.0000 + $f0_t_n*1.0000}) endvertex
+vertex p2_0 ({expr -0.3827*$cr0_r/1.0 + (1-$cr0_r/1.0)*-4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*-0.0000} {expr -1.8467*$cr0_r/1.0 + (1-$cr0_r/1.0)*-2.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*-0.5000} {expr 1.1533*$cr0_r/1.0 + (1-$cr0_r/1.0)*0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*0.5000}) endvertex
+vertex p2_1 ({expr -0.9914*$cr0_r/1.0 + (1-$cr0_r/1.0)*-4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*-0.0000} {expr -2.4077*$cr0_r/1.0 + (1-$cr0_r/1.0)*-2.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*-0.5000} {expr 0.5923*$cr0_r/1.0 + (1-$cr0_r/1.0)*0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*0.5000}) endvertex
+vertex p2_2 ({expr -0.6088*$cr0_r/1.0 + (1-$cr0_r/1.0)*-4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*-0.0000} {expr -3.0610*$cr0_r/1.0 + (1-$cr0_r/1.0)*-2.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*-0.5000} {expr -0.0610*$cr0_r/1.0 + (1-$cr0_r/1.0)*0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*0.5000}) endvertex
+vertex p2_3 ({expr 0.3827*$cr0_r/1.0 + (1-$cr0_r/1.0)*-4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*-0.0000} {expr -3.1533*$cr0_r/1.0 + (1-$cr0_r/1.0)*-2.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*-0.5000} {expr -0.1533*$cr0_r/1.0 + (1-$cr0_r/1.0)*0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*0.5000}) endvertex
+vertex p2_4 ({expr 0.9914*$cr0_r/1.0 + (1-$cr0_r/1.0)*-4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*-0.0000} {expr -2.5923*$cr0_r/1.0 + (1-$cr0_r/1.0)*-2.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*-0.5000} {expr 0.4077*$cr0_r/1.0 + (1-$cr0_r/1.0)*0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*0.5000}) endvertex
+vertex p2_5 ({expr 0.6088*$cr0_r/1.0 + (1-$cr0_r/1.0)*-4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*-0.0000} {expr -1.9390*$cr0_r/1.0 + (1-$cr0_r/1.0)*-2.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*-0.5000} {expr 1.0610*$cr0_r/1.0 + (1-$cr0_r/1.0)*0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*0.5000}) endvertex
+vertex p2_6 ({expr -0.3827*$cr0_r/1.0 + (1-$cr0_r/1.0)*4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*0.0000} {expr -0.8467*$cr0_r/1.0 + (1-$cr0_r/1.0)*-1.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*0.5000} {expr 0.1533*$cr0_r/1.0 + (1-$cr0_r/1.0)*-0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*-0.5000}) endvertex
+vertex p2_7 ({expr -0.9914*$cr0_r/1.0 + (1-$cr0_r/1.0)*4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*0.0000} {expr -1.4077*$cr0_r/1.0 + (1-$cr0_r/1.0)*-1.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*0.5000} {expr -0.4077*$cr0_r/1.0 + (1-$cr0_r/1.0)*-0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*-0.5000}) endvertex
+vertex p2_8 ({expr -0.6088*$cr0_r/1.0 + (1-$cr0_r/1.0)*4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*0.0000} {expr -2.0610*$cr0_r/1.0 + (1-$cr0_r/1.0)*-1.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*0.5000} {expr -1.0610*$cr0_r/1.0 + (1-$cr0_r/1.0)*-0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*-0.5000}) endvertex
+vertex p2_9 ({expr 0.3827*$cr0_r/1.0 + (1-$cr0_r/1.0)*4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*0.0000} {expr -2.1533*$cr0_r/1.0 + (1-$cr0_r/1.0)*-1.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*0.5000} {expr -1.1533*$cr0_r/1.0 + (1-$cr0_r/1.0)*-0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*-0.5000}) endvertex
+vertex p2_10 ({expr 0.9914*$cr0_r/1.0 + (1-$cr0_r/1.0)*4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*0.0000} {expr -1.5923*$cr0_r/1.0 + (1-$cr0_r/1.0)*-1.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*0.5000} {expr -0.5923*$cr0_r/1.0 + (1-$cr0_r/1.0)*-0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*-0.5000}) endvertex
+vertex p2_11 ({expr 0.6088*$cr0_r/1.0 + (1-$cr0_r/1.0)*4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*0.0000} {expr -0.9390*$cr0_r/1.0 + (1-$cr0_r/1.0)*-1.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*0.5000} {expr 0.0610*$cr0_r/1.0 + (1-$cr0_r/1.0)*-0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*-0.5000}) endvertex
+vertex p3_0 ({expr 0.3827*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*0.0000} {expr 3.8467*$cr1_r/1.0 + (1-$cr1_r/1.0)*4.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000} {expr 1.1533*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000}) endvertex
+vertex p3_1 ({expr 0.9914*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*0.0000} {expr 4.4077*$cr1_r/1.0 + (1-$cr1_r/1.0)*4.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000} {expr 0.5923*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000}) endvertex
+vertex p3_2 ({expr 0.6088*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*0.0000} {expr 5.0610*$cr1_r/1.0 + (1-$cr1_r/1.0)*4.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000} {expr -0.0610*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000}) endvertex
+vertex p3_3 ({expr -0.3827*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*0.0000} {expr 5.1533*$cr1_r/1.0 + (1-$cr1_r/1.0)*4.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000} {expr -0.1533*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000}) endvertex
+vertex p3_4 ({expr -0.9914*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*0.0000} {expr 4.5923*$cr1_r/1.0 + (1-$cr1_r/1.0)*4.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000} {expr 0.4077*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000}) endvertex
+vertex p3_5 ({expr -0.6088*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*0.0000} {expr 3.9390*$cr1_r/1.0 + (1-$cr1_r/1.0)*4.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000} {expr 1.0610*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000}) endvertex
+vertex p3_6 ({expr 0.3827*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*-0.0000} {expr 2.8467*$cr1_r/1.0 + (1-$cr1_r/1.0)*3.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000} {expr 0.1533*$cr1_r/1.0 + (1-$cr1_r/1.0)*-0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000}) endvertex
+vertex p3_7 ({expr 0.9914*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*-0.0000} {expr 3.4077*$cr1_r/1.0 + (1-$cr1_r/1.0)*3.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000} {expr -0.4077*$cr1_r/1.0 + (1-$cr1_r/1.0)*-0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000}) endvertex
+vertex p3_8 ({expr 0.6088*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*-0.0000} {expr 4.0610*$cr1_r/1.0 + (1-$cr1_r/1.0)*3.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000} {expr -1.0610*$cr1_r/1.0 + (1-$cr1_r/1.0)*-0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000}) endvertex
+vertex p3_9 ({expr -0.3827*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*-0.0000} {expr 4.1533*$cr1_r/1.0 + (1-$cr1_r/1.0)*3.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000} {expr -1.1533*$cr1_r/1.0 + (1-$cr1_r/1.0)*-0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000}) endvertex
+vertex p3_10 ({expr -0.9914*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*-0.0000} {expr 3.5923*$cr1_r/1.0 + (1-$cr1_r/1.0)*3.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000} {expr -0.5923*$cr1_r/1.0 + (1-$cr1_r/1.0)*-0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000}) endvertex
+vertex p3_11 ({expr -0.6088*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*-0.0000} {expr 2.9390*$cr1_r/1.0 + (1-$cr1_r/1.0)*3.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000} {expr 0.0610*$cr1_r/1.0 + (1-$cr1_r/1.0)*-0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000}) endvertex
+vertex p4_0 (0 -6 -7) endvertex
+vertex p4_1 (6 -6 -5) endvertex
+vertex p4_2 (7 -6 -1) endvertex
+vertex p4_3 (3 -6 8) endvertex
+vertex p4_4 (3 6 8) endvertex
+vertex p4_5 (6 7 -1) endvertex
+vertex p4_6 (0 9 -3) endvertex
+vertex p4_7 (-6 7 -1) endvertex
+vertex p4_8 (-3 6 8) endvertex
+vertex p4_9 (-3 -6 8) endvertex
+vertex p4_10 (-7 -6 -1) endvertex
+vertex p4_11 (-6 -6 -5) endvertex
+facet f0 (p0_6 p0_7 p0_1 p0_0 ) endfacet
+facet f1 (p0_7 p0_6 p3_11 p3_5 ) endfacet
+facet f2 (p0_7 p0_8 p0_2 p0_1 ) endfacet
+facet f3 (p0_0 p0_1 p3_0 p3_6 ) endfacet
+facet f4 (p0_11 p0_6 p0_0 p0_5 ) endfacet
+facet f5 (p3_11 p0_6 p0_11 p1_3 ) endfacet
+facet f6 (p0_7 p3_5 p3_4 p4_7 ) endfacet
+facet f7 (p4_8 p0_8 p0_7 p4_7 ) endfacet
+facet f8 (p0_8 p0_9 p0_3 p0_2 ) endfacet
+facet f9 (p0_2 p4_4 p4_5 p0_1 ) endfacet
+facet f10 (p4_5 p3_1 p3_0 p0_1 ) endfacet
+facet f11 (p0_5 p0_0 p3_6 p1_0 ) endfacet
+facet f12 (p0_10 p0_11 p0_5 p0_4 ) endfacet
+facet f13 (p3_9 p3_10 p3_11 p1_3 ) endfacet
+facet f14 (p3_4 p3_3 p4_6 p4_7 ) endfacet
+facet f15 (p0_9 p0_8 p4_8 p4_9 ) endfacet
+facet f16 (p0_9 p0_10 p0_4 p0_3 ) endfacet
+facet f17 (p0_2 p0_3 p4_3 p4_4 ) endfacet
+facet f18 (p3_0 p3_1 p3_7 p3_6 ) endfacet
+facet f19 (p3_6 p3_7 p3_8 p1_0 ) endfacet
+facet f20 (p2_10 p2_11 p0_5 p1_0 ) endfacet
+facet f21 (p2_6 p0_11 p0_10 p2_0 ) endfacet
+facet f22 (p2_11 p2_5 p0_4 p0_5 ) endfacet
+facet f23 (p1_2 p3_9 p1_3 ) endfacet
+facet f24 (p3_3 p3_2 p4_5 p4_6 ) endfacet
+facet f25 (p0_10 p0_9 p4_9 p4_10 ) endfacet
+facet f26 (p4_3 p0_3 p0_4 p2_5 ) endfacet
+facet f27 (p3_1 p3_2 p3_8 p3_7 ) endfacet
+facet f28 (p1_0 p3_8 p1_1 ) endfacet
+facet f29 (p1_3 p0_11 p2_6 p2_7 ) endfacet
+facet f30 (p0_10 p4_10 p2_1 p2_0 ) endfacet
+facet f31 (p2_4 p2_5 p2_11 p2_10 ) endfacet
+facet f32 (p4_5 p3_2 p3_1 ) endfacet
+facet f33 (p4_3 p2_5 p4_2 ) endfacet
+facet f34 (p3_2 p3_3 p3_9 p3_8 ) endfacet
+facet f35 (p1_2 p1_1 p3_8 p3_9 ) endfacet
+facet f36 (p2_0 p2_1 p2_7 p2_6 ) endfacet
+facet f37 (p2_2 p2_1 p4_10 p4_11 ) endfacet
+facet f38 (p4_1 p4_2 p2_5 p2_4 ) endfacet
+facet f39 (p2_3 p2_4 p2_10 p2_9 ) endfacet
+facet f40 (p3_3 p3_4 p3_10 p3_9 ) endfacet
+facet f41 (p2_1 p2_2 p2_8 p2_7 ) endfacet
+facet f42 (p4_11 p4_0 p2_3 p2_2 ) endfacet
+facet f43 (p1_0 p1_5 p2_9 p2_10 ) endfacet
+facet f44 (p4_0 p4_1 p2_4 p2_3 ) endfacet
+facet f45 (p2_2 p2_3 p2_9 p2_8 ) endfacet
+facet f46 (p3_4 p3_5 p3_11 p3_10 ) endfacet
+facet f47 (p2_7 p2_8 p1_4 p1_3 ) endfacet
+facet f48 (p2_8 p2_9 p1_5 p1_4 ) endfacet
+
+endmesh
+
+
+
+
+mesh bsurf
+
+vertex p0_0 ({expr 1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*1.0000} {expr 2.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*-0.0000} {expr 0.7679*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*0.0000}) endvertex
+vertex p0_1 ({expr 1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*1.0000} {expr 3.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*-0.0000} {expr 2.5000*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*0.0000}) endvertex
+vertex p0_2 ({expr 1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*1.0000} {expr 2.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*-0.0000} {expr 4.2321*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*0.0000}) endvertex
+vertex p0_3 ({expr 1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*1.0000} {expr 0.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*-0.0000} {expr 4.2321*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*0.0000}) endvertex
+vertex p0_4 ({expr 1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*1.0000} {expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*-0.0000} {expr 2.5000*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*0.0000}) endvertex
+vertex p0_5 ({expr 1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*1.0000} {expr -0.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*-0.0000} {expr 0.7679*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*0.0000}) endvertex
+vertex p0_6 ({expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*-1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*-1.0000} {expr 2.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*0.0000} {expr 0.7679*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*-0.0000}) endvertex
+vertex p0_7 ({expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*-1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*-1.0000} {expr 3.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*0.0000} {expr 2.5000*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*-0.0000}) endvertex
+vertex p0_8 ({expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*-1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*-1.0000} {expr 2.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*0.0000} {expr 4.2321*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*-0.0000}) endvertex
+vertex p0_9 ({expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*-1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*-1.0000} {expr 0.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*0.0000} {expr 4.2321*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*-0.0000}) endvertex
+vertex p0_10 ({expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*-1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*-1.0000} {expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*0.0000} {expr 2.5000*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*-0.0000}) endvertex
+vertex p0_11 ({expr -1.0000*$t0_r/2.0 + (1-$t0_r/2.0)*-1.0+ $t0_t_r*0.0000 + $t0_t_u*0.0000 + $t0_t_n*1.0000+ 0.5*($t0_gap-1.0)*-1.0000} {expr -0.0000*$t0_r/2.0 + (1-$t0_r/2.0)*1.0+ $t0_t_r*0.3660 + $t0_t_u*0.6340 + $t0_t_n*-0.0000+ 0.5*($t0_gap-1.0)*0.0000} {expr 0.7679*$t0_r/2.0 + (1-$t0_r/2.0)*2.5+ $t0_t_r*-0.6340 + $t0_t_u*0.3660 + $t0_t_n*0.0000+ 0.5*($t0_gap-1.0)*-0.0000}) endvertex
+vertex p1_0 ({expr 6.0000*$f0_r/6.0 + (1-$f0_r/6.0)*0+ $f0_t_r*1.0000 + $f0_t_u*0.0000 + $f0_t_n*0.0000} {expr 2.0000*$f0_r/6.0 + (1-$f0_r/6.0)*2+ $f0_t_r*0.0000 + $f0_t_u*1.0000 + $f0_t_n*0.0000} {expr -8.0000*$f0_r/6.0 + (1-$f0_r/6.0)*-8+ $f0_t_r*0.0000 + $f0_t_u*0.0000 + $f0_t_n*1.0000}) endvertex
+vertex p1_1 ({expr 3.0000*$f0_r/6.0 + (1-$f0_r/6.0)*0+ $f0_t_r*1.0000 + $f0_t_u*0.0000 + $f0_t_n*0.0000} {expr 7.1962*$f0_r/6.0 + (1-$f0_r/6.0)*2+ $f0_t_r*0.0000 + $f0_t_u*1.0000 + $f0_t_n*0.0000} {expr -8.0000*$f0_r/6.0 + (1-$f0_r/6.0)*-8+ $f0_t_r*0.0000 + $f0_t_u*0.0000 + $f0_t_n*1.0000}) endvertex
+vertex p1_2 ({expr -3.0000*$f0_r/6.0 + (1-$f0_r/6.0)*0+ $f0_t_r*1.0000 + $f0_t_u*0.0000 + $f0_t_n*0.0000} {expr 7.1962*$f0_r/6.0 + (1-$f0_r/6.0)*2+ $f0_t_r*0.0000 + $f0_t_u*1.0000 + $f0_t_n*0.0000} {expr -8.0000*$f0_r/6.0 + (1-$f0_r/6.0)*-8+ $f0_t_r*0.0000 + $f0_t_u*0.0000 + $f0_t_n*1.0000}) endvertex
+vertex p1_3 ({expr -6.0000*$f0_r/6.0 + (1-$f0_r/6.0)*0+ $f0_t_r*1.0000 + $f0_t_u*0.0000 + $f0_t_n*0.0000} {expr 2.0000*$f0_r/6.0 + (1-$f0_r/6.0)*2+ $f0_t_r*0.0000 + $f0_t_u*1.0000 + $f0_t_n*0.0000} {expr -8.0000*$f0_r/6.0 + (1-$f0_r/6.0)*-8+ $f0_t_r*0.0000 + $f0_t_u*0.0000 + $f0_t_n*1.0000}) endvertex
+vertex p1_4 ({expr -3.0000*$f0_r/6.0 + (1-$f0_r/6.0)*0+ $f0_t_r*1.0000 + $f0_t_u*0.0000 + $f0_t_n*0.0000} {expr -3.1962*$f0_r/6.0 + (1-$f0_r/6.0)*2+ $f0_t_r*0.0000 + $f0_t_u*1.0000 + $f0_t_n*0.0000} {expr -8.0000*$f0_r/6.0 + (1-$f0_r/6.0)*-8+ $f0_t_r*0.0000 + $f0_t_u*0.0000 + $f0_t_n*1.0000}) endvertex
+vertex p1_5 ({expr 3.0000*$f0_r/6.0 + (1-$f0_r/6.0)*0+ $f0_t_r*1.0000 + $f0_t_u*0.0000 + $f0_t_n*0.0000} {expr -3.1962*$f0_r/6.0 + (1-$f0_r/6.0)*2+ $f0_t_r*0.0000 + $f0_t_u*1.0000 + $f0_t_n*0.0000} {expr -8.0000*$f0_r/6.0 + (1-$f0_r/6.0)*-8+ $f0_t_r*0.0000 + $f0_t_u*0.0000 + $f0_t_n*1.0000}) endvertex
+vertex p2_0 ({expr -0.3827*$cr0_r/1.0 + (1-$cr0_r/1.0)*-4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*-0.0000} {expr -1.8467*$cr0_r/1.0 + (1-$cr0_r/1.0)*-2.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*-0.5000} {expr 1.1533*$cr0_r/1.0 + (1-$cr0_r/1.0)*0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*0.5000}) endvertex
+vertex p2_1 ({expr -0.9914*$cr0_r/1.0 + (1-$cr0_r/1.0)*-4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*-0.0000} {expr -2.4077*$cr0_r/1.0 + (1-$cr0_r/1.0)*-2.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*-0.5000} {expr 0.5923*$cr0_r/1.0 + (1-$cr0_r/1.0)*0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*0.5000}) endvertex
+vertex p2_2 ({expr -0.6088*$cr0_r/1.0 + (1-$cr0_r/1.0)*-4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*-0.0000} {expr -3.0610*$cr0_r/1.0 + (1-$cr0_r/1.0)*-2.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*-0.5000} {expr -0.0610*$cr0_r/1.0 + (1-$cr0_r/1.0)*0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*0.5000}) endvertex
+vertex p2_3 ({expr 0.3827*$cr0_r/1.0 + (1-$cr0_r/1.0)*-4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*-0.0000} {expr -3.1533*$cr0_r/1.0 + (1-$cr0_r/1.0)*-2.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*-0.5000} {expr -0.1533*$cr0_r/1.0 + (1-$cr0_r/1.0)*0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*0.5000}) endvertex
+vertex p2_4 ({expr 0.9914*$cr0_r/1.0 + (1-$cr0_r/1.0)*-4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*-0.0000} {expr -2.5923*$cr0_r/1.0 + (1-$cr0_r/1.0)*-2.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*-0.5000} {expr 0.4077*$cr0_r/1.0 + (1-$cr0_r/1.0)*0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*0.5000}) endvertex
+vertex p2_5 ({expr 0.6088*$cr0_r/1.0 + (1-$cr0_r/1.0)*-4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*-0.0000} {expr -1.9390*$cr0_r/1.0 + (1-$cr0_r/1.0)*-2.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*-0.5000} {expr 1.0610*$cr0_r/1.0 + (1-$cr0_r/1.0)*0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*0.5000}) endvertex
+vertex p2_6 ({expr -0.3827*$cr0_r/1.0 + (1-$cr0_r/1.0)*4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*0.0000} {expr -0.8467*$cr0_r/1.0 + (1-$cr0_r/1.0)*-1.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*0.5000} {expr 0.1533*$cr0_r/1.0 + (1-$cr0_r/1.0)*-0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*-0.5000}) endvertex
+vertex p2_7 ({expr -0.9914*$cr0_r/1.0 + (1-$cr0_r/1.0)*4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*0.0000} {expr -1.4077*$cr0_r/1.0 + (1-$cr0_r/1.0)*-1.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*0.5000} {expr -0.4077*$cr0_r/1.0 + (1-$cr0_r/1.0)*-0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*-0.5000}) endvertex
+vertex p2_8 ({expr -0.6088*$cr0_r/1.0 + (1-$cr0_r/1.0)*4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*0.0000} {expr -2.0610*$cr0_r/1.0 + (1-$cr0_r/1.0)*-1.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*0.5000} {expr -1.0610*$cr0_r/1.0 + (1-$cr0_r/1.0)*-0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*-0.5000}) endvertex
+vertex p2_9 ({expr 0.3827*$cr0_r/1.0 + (1-$cr0_r/1.0)*4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*0.0000} {expr -2.1533*$cr0_r/1.0 + (1-$cr0_r/1.0)*-1.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*0.5000} {expr -1.1533*$cr0_r/1.0 + (1-$cr0_r/1.0)*-0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*-0.5000}) endvertex
+vertex p2_10 ({expr 0.9914*$cr0_r/1.0 + (1-$cr0_r/1.0)*4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*0.0000} {expr -1.5923*$cr0_r/1.0 + (1-$cr0_r/1.0)*-1.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*0.5000} {expr -0.5923*$cr0_r/1.0 + (1-$cr0_r/1.0)*-0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*-0.5000}) endvertex
+vertex p2_11 ({expr 0.6088*$cr0_r/1.0 + (1-$cr0_r/1.0)*4.53246651837e-17+ $cr0_t_r*-0.2265 + $cr0_t_u*-0.5469 + $cr0_t_n*-0.0000+ 0.5*($cr0_gap-1.0)*0.0000} {expr -0.9390*$cr0_r/1.0 + (1-$cr0_r/1.0)*-1.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*-0.5000+ 0.5*($cr0_gap-1.0)*0.5000} {expr 0.0610*$cr0_r/1.0 + (1-$cr0_r/1.0)*-0.5+ $cr0_t_r*0.3867 + $cr0_t_u*-0.1602 + $cr0_t_n*0.5000+ 0.5*($cr0_gap-1.0)*-0.5000}) endvertex
+vertex p3_0 ({expr 0.3827*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*0.0000} {expr 3.8467*$cr1_r/1.0 + (1-$cr1_r/1.0)*4.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000} {expr 1.1533*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000}) endvertex
+vertex p3_1 ({expr 0.9914*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*0.0000} {expr 4.4077*$cr1_r/1.0 + (1-$cr1_r/1.0)*4.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000} {expr 0.5923*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000}) endvertex
+vertex p3_2 ({expr 0.6088*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*0.0000} {expr 5.0610*$cr1_r/1.0 + (1-$cr1_r/1.0)*4.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000} {expr -0.0610*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000}) endvertex
+vertex p3_3 ({expr -0.3827*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*0.0000} {expr 5.1533*$cr1_r/1.0 + (1-$cr1_r/1.0)*4.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000} {expr -0.1533*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000}) endvertex
+vertex p3_4 ({expr -0.9914*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*0.0000} {expr 4.5923*$cr1_r/1.0 + (1-$cr1_r/1.0)*4.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000} {expr 0.4077*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000}) endvertex
+vertex p3_5 ({expr -0.6088*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*0.0000} {expr 3.9390*$cr1_r/1.0 + (1-$cr1_r/1.0)*4.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000} {expr 1.0610*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*0.5000}) endvertex
+vertex p3_6 ({expr 0.3827*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*-0.0000} {expr 2.8467*$cr1_r/1.0 + (1-$cr1_r/1.0)*3.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000} {expr 0.1533*$cr1_r/1.0 + (1-$cr1_r/1.0)*-0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000}) endvertex
+vertex p3_7 ({expr 0.9914*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*-0.0000} {expr 3.4077*$cr1_r/1.0 + (1-$cr1_r/1.0)*3.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000} {expr -0.4077*$cr1_r/1.0 + (1-$cr1_r/1.0)*-0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000}) endvertex
+vertex p3_8 ({expr 0.6088*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*-0.0000} {expr 4.0610*$cr1_r/1.0 + (1-$cr1_r/1.0)*3.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000} {expr -1.0610*$cr1_r/1.0 + (1-$cr1_r/1.0)*-0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000}) endvertex
+vertex p3_9 ({expr -0.3827*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*-0.0000} {expr 4.1533*$cr1_r/1.0 + (1-$cr1_r/1.0)*3.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000} {expr -1.1533*$cr1_r/1.0 + (1-$cr1_r/1.0)*-0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000}) endvertex
+vertex p3_10 ({expr -0.9914*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*-0.0000} {expr 3.5923*$cr1_r/1.0 + (1-$cr1_r/1.0)*3.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000} {expr -0.5923*$cr1_r/1.0 + (1-$cr1_r/1.0)*-0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000}) endvertex
+vertex p3_11 ({expr -0.6088*$cr1_r/1.0 + (1-$cr1_r/1.0)*0.0+ $cr1_t_r*0.2265 + $cr1_t_u*0.5469 + $cr1_t_n*0.0000+ 0.5*($cr1_gap-1.0)*-0.0000} {expr 2.9390*$cr1_r/1.0 + (1-$cr1_r/1.0)*3.5+ $cr1_t_r*-0.3867 + $cr1_t_u*0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000} {expr 0.0610*$cr1_r/1.0 + (1-$cr1_r/1.0)*-0.5+ $cr1_t_r*0.3867 + $cr1_t_u*-0.1602 + $cr1_t_n*0.5000+ 0.5*($cr1_gap-1.0)*-0.5000}) endvertex
+vertex p4_0 (0 -6 -7) endvertex
+vertex p4_1 (6 -6 -5) endvertex
+vertex p4_2 (7 -6 -1) endvertex
+vertex p4_3 (3 -6 8) endvertex
+vertex p4_4 (3 6 8) endvertex
+vertex p4_5 (6 7 -1) endvertex
+vertex p4_6 (0 9 -3) endvertex
+vertex p4_7 (-6 7 -1) endvertex
+vertex p4_8 (-3 6 8) endvertex
+vertex p4_9 (-3 -6 8) endvertex
+vertex p4_10 (-7 -6 -1) endvertex
+vertex p4_11 (-6 -6 -5) endvertex
+facet f0 (p0_0 p0_1 p0_7 p0_6 ) endfacet
+facet f1 (p3_6 p3_0 p0_1 p0_0 ) endfacet
+facet f2 (p0_1 p0_2 p0_8 p0_7 ) endfacet
+facet f3 (p3_5 p3_11 p0_6 p0_7 ) endfacet
+facet f4 (p0_5 p0_0 p0_6 p0_11 ) endfacet
+facet f5 (p0_1 p3_0 p3_1 p4_5 ) endfacet
+facet f6 (p1_0 p3_6 p0_0 p0_5 ) endfacet
+facet f7 (p0_1 p4_5 p4_4 p0_2 ) endfacet
+facet f8 (p0_2 p0_3 p0_9 p0_8 ) endfacet
+facet f9 (p4_7 p0_7 p0_8 p4_8 ) endfacet
+facet f10 (p1_3 p0_11 p0_6 p3_11 ) endfacet
+facet f11 (p4_7 p3_4 p3_5 p0_7 ) endfacet
+facet f12 (p0_4 p0_5 p0_11 p0_10 ) endfacet
+facet f13 (p3_6 p3_7 p3_1 p3_0 ) endfacet
+facet f14 (p1_0 p3_8 p3_7 p3_6 ) endfacet
+facet f15 (p1_0 p0_5 p2_11 p2_10 ) endfacet
+facet f16 (p4_4 p4_3 p0_3 p0_2 ) endfacet
+facet f17 (p0_3 p0_4 p0_10 p0_9 ) endfacet
+facet f18 (p4_9 p4_8 p0_8 p0_9 ) endfacet
+facet f19 (p1_3 p3_11 p3_10 p3_9 ) endfacet
+facet f20 (p4_7 p4_6 p3_3 p3_4 ) endfacet
+facet f21 (p0_5 p0_4 p2_5 p2_11 ) endfacet
+facet f22 (p2_0 p0_10 p0_11 p2_6 ) endfacet
+facet f23 (p3_7 p3_8 p3_2 p3_1 ) endfacet
+facet f24 (p1_1 p3_8 p1_0 ) endfacet
+facet f25 (p2_5 p0_4 p0_3 p4_3 ) endfacet
+facet f26 (p4_10 p4_9 p0_9 p0_10 ) endfacet
+facet f27 (p1_3 p3_9 p1_2 ) endfacet
+facet f28 (p4_6 p4_5 p3_2 p3_3 ) endfacet
+facet f29 (p2_10 p2_11 p2_5 p2_4 ) endfacet
+facet f30 (p2_0 p2_1 p4_10 p0_10 ) endfacet
+facet f31 (p2_7 p2_6 p0_11 p1_3 ) endfacet
+facet f32 (p3_1 p3_2 p4_5 ) endfacet
+facet f33 (p3_8 p3_9 p3_3 p3_2 ) endfacet
+facet f34 (p3_9 p3_8 p1_1 p1_2 ) endfacet
+facet f35 (p4_2 p2_5 p4_3 ) endfacet
+facet f36 (p2_4 p2_5 p4_2 p4_1 ) endfacet
+facet f37 (p2_9 p2_10 p2_4 p2_3 ) endfacet
+facet f38 (p4_11 p4_10 p2_1 p2_2 ) endfacet
+facet f39 (p2_6 p2_7 p2_1 p2_0 ) endfacet
+facet f40 (p3_9 p3_10 p3_4 p3_3 ) endfacet
+facet f41 (p2_3 p2_4 p4_1 p4_0 ) endfacet
+facet f42 (p2_10 p2_9 p1_5 p1_0 ) endfacet
+facet f43 (p2_8 p2_9 p2_3 p2_2 ) endfacet
+facet f44 (p2_2 p2_3 p4_0 p4_11 ) endfacet
+facet f45 (p2_7 p2_8 p2_2 p2_1 ) endfacet
+facet f46 (p3_10 p3_11 p3_5 p3_4 ) endfacet
+facet f47 (p1_4 p1_5 p2_9 p2_8 ) endfacet
+facet f48 (p1_3 p1_4 p2_8 p2_7 ) endfacet
+
+endmesh
+
+#######################################################
+subdivision fSDsurf
+
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)}
+  errormetric {expr $oSubdivision(errormetric)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawcurrent {expr $oSubdivision(drawcurrent)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+  vknots {expr $oSubdivision(a)}
+  vorder {expr $oSubdivision(b)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+
+
+  instance fsurf    endinstance
+
+endsubdivision
+
+#######################################################
+
+subdivision bSDsurf
+
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)}
+  errormetric {expr $oSubdivision(errormetric)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawcurrent {expr $oSubdivision(drawcurrent)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+  vknots {expr $oSubdivision(a)}
+  vorder {expr $oSubdivision(b)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+  instance bsurf    endinstance
+
+endsubdivision
+
+#######################################################
+
+
+#######################################################
+
+offset oOffset
+  lod {expr $oOffset(lod)}
+  shading {expr $oOffset(shading)}
+
+  type  {expr $oOffset(type)}    ###  SLF_OFFSET_PERFORATED ## 
+
+  height  {expr $oOffset(height)}   ###  0.10  ## {expr $par_ghgt}    ##
+  width   {expr $oOffset(width)}    ###  0.05  ## {expr $par_gwid}    ##
+  drawcontrols {expr $oOffset(drawcontrols)}
+
+  instance  fSDsurf     endinstance
+endoffset
+
+#######################################################
+
+
+
+##########   Putting it all together  ###################
+
+group assembly
+  instance coord_axes   scale( 13 13 13 )  endinstance
+
+  #instance gabo2  surface  Z   endinstance   ## NO transformations to keep all control points visible in design space!
+  #instance cube   surface  K  scale(6 6 6)   endinstance
+  #instance funnel surface  U   endinstance
+  #instance tunnel surface  G   endinstance
+
+  instance fSDsurf    surface C   endinstance
+  instance bSDsurf    surface M   endinstance
+
+#  instance oOffset    surface O   endinstance
+
+endgroup
+
+
+####  Some surface colors  ################################
+
+surface R color (1 0 0) endsurface     # Red
+surface O color (0.9 0.6 0) endsurface # Orange
+surface Y color (1 1 0) endsurface     # Yellow
+surface L color (0.6 0.8 0) endsurface # Lime
+surface G color (0 0.9 0) endsurface   # Green
+surface A color (0 0.9 0.7) endsurface # Aqua
+surface C color (0 1 1) endsurface     # Cyan
+surface U color (0 0.5 1) endsurface   # Uniform
+surface B color (0 0 1) endsurface     # Blue
+surface P color (0.6 0 1) endsurface   # Purple
+surface M color (1 0 1) endsurface     # Magenta
+surface Z color (1 0 0.5) endsurface   # Zinnober
+
+surface K color (0 0 0) endsurface     # blacK
+surface W color (1 1 1) endsurface     # White
+
+
+###########################################################
+# A generic setup for viewing SLF objects
+##########################################
+
+group world
+  lod {expr $gRoot_lod}
+  shading {expr $gRoot_shading}
+
+  instance  assembly   scale( 0.01 0.01 0.01 )  rotate(1 0 0)(-110) rotate(0 1 0)(-60) rotate(0 0 1)(20)  endinstance     
+
+  instance amb
+    id main_amb
+  endinstance
+  instance sun
+    id front_sun
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+  instance anti_sun
+    id back_sun
+    rotate (1 0 0) (180)
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+endgroup
+
+
+light amb
+  type SLF_AMBIENT
+  color (0.4 0.4 0.4)
+endlight
+
+light sun
+  type SLF_DIRECTIONAL
+  color (0.5 0.5 0.5)
+endlight
+
+light anti_sun
+  type SLF_DIRECTIONAL
+  color (0.3 0.3 0.3)
+endlight
+
+
+camera cam   
+## choose one or the other mode:
+
+#  projection SLF_PARALLEL
+#  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 2.0)
+
+  projection SLF_PERSPECTIVE
+  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 -0.01)
+endcamera
+
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0.0 0.0 1 )
+  endinstance
+endgroup
+
+window Window
+  background (0.7 0.7 0.7)
+endwindow
+
+viewport vp Window
+endviewport
+
+render vp gCam.iCam.cam world 
+  light world.front_sun.sun
+  light world.back_sun.anti_sun
+  light world.main_amb.amb
+endrender
+
+########################################
+
+
