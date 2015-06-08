@@ -1,0 +1,612 @@
+### Perry_Tetra4_offset.slf
+#   A program to create surface sculptures in the style of Perry's TETRA sculpture.
+#   Approach: place circular "rims" into absolute design space
+#   show connectin branches between those 1D-manifolds to make a crude polyhedral approximation
+#   of the desired surface topology. Then use subdivision to smooth that surface.
+
+##  ALL the basic constructs are parametrized control polygons. 
+##  Rims are generalized circles (n-gons) that can be placed arbitrarily in space.
+
+### Now place all circles directly in absolute space without transformations.
+### CHS 2014/10/22
+
+### Fix the rim enhancement to be an n-gon
+##  and add the offseting capability
+### CHS 2014/10/30
+
+###################################################
+
+tclinit {
+
+  package require slideui
+
+  toplevel .slfWindow.ui
+  CreateSLIDESubdivisionObject oSubdivision
+  set widget [CreateSLIDESubdivisionUI .slfWindow.ui oSubdivision]
+  pack $widget
+
+  toplevel .slfWindow.uiOffset
+  CreateSLIDEOffsetObject oOffset
+  set widget [CreateSLIDEOffsetUI .slfWindow.uiOffset oOffset]
+  pack $widget
+}
+
+
+## general links and definitions:
+
+tclinit {
+  set winName .slfWindow
+
+  source SLIDEUI.tcl
+  source MATH.tcl
+
+  set to_rad [expr $SLF_PI/180.0 ]
+  CreateGroupUI $winName gRoot
+}
+
+
+#####  Some elementary geometry   #################
+
+## Coordinate axes:
+point ooo  ( 0 0 0 ) endpoint
+point xoo  ( 1 0 0 ) endpoint
+point oyo  ( 0 1 0 ) endpoint
+point ooz  ( 0 0 1 ) endpoint
+
+polyline xaxis pointlist (ooo xoo) endpolyline
+polyline yaxis pointlist (ooo oyo) endpolyline
+polyline zaxis pointlist (ooo ooz) endpolyline
+
+group coord_axes
+  instance xaxis surface R endinstance
+  instance yaxis surface B endinstance
+  instance zaxis surface G endinstance
+endgroup
+
+###################################################
+
+# a reference cube -- 
+point XYZ  ( 1  1  1 ) endpoint
+point XYC  ( 1  1  -1 ) endpoint
+point XBZ  ( 1  -1  1 ) endpoint
+point XBC  ( 1  -1  -1 ) endpoint
+point AYZ  ( -1  1  1 ) endpoint
+point AYC  ( -1  1  -1 ) endpoint
+point ABZ  ( -1  -1  1 ) endpoint
+point ABC  ( -1  -1  -1 ) endpoint
+
+face c1   (XYZ XBZ XBC XYC ) endface
+face c2   (XYZ XYC AYC AYZ ) endface
+face c3   (AYZ AYC ABC ABZ ) endface
+face c4   (ABZ ABC XBC XBZ ) endface
+face c5   (XYZ AYZ ABZ XBZ ) endface
+face c6   (XYC XBC ABC AYC ) endface
+
+object cube (c1 c2 c3 c4 c5 c6)    solid SLF_HOLLOW   shading SLF_WIRE   endobject
+
+
+#######################  Funnel == a special circular rim;  ONE GUI for all the rings  ##########################
+
+tclinit {
+  
+  proc CreateFunUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set d     [CreateScale $name $root  d   "cube-diagonal"    2.8     1     4     0.1    1 horizontal]
+    set r     [CreateScale $name $root  r   "funnel-radius"    7.0     1.0  10.0   0.1    1 horizontal]
+    set a     [CreateScale $name $root  a   "funnel-alpha"     0.0     0.0  60.0   0.1    1 horizontal]
+    set t     [CreateScale $name $root  t   "funnel-theta"   -70     -90    90     1      1 horizontal]
+    set p     [CreateScale $name $root  p   "funnel-phi"      45.0  -180   180     0.1    1 horizontal]
+    set x     [CreateScale $name $root  x   "funnel x-pos"     2.0     0     9     1      1 horizontal]
+    set y     [CreateScale $name $root  y   "funnel y-pos"     2.0     0     9     1      1 horizontal]
+    set z     [CreateScale $name $root  z   "funnel z-pos"     0.0    -4     4     0.1    1 horizontal]
+
+    set minTorsion   [CreateScale $name $root  minTorsion    "minTorsion"       0    0    1    1    1 horizontal]
+    set fazim        [CreateScale $name $root  fazim         "funnel-azim"    -90  -90   90    1    1 horizontal]
+    set twist        [CreateScale $name $root  twist         "twist"            0  -90   90    1    1 horizontal]
+    set drawSweep    [CreateScale $name $root  drawSweep     "drawSweep"        1    0    1    1    1 horizontal]
+    set drawControls [CreateScale $name $root  drawControls  "drawControls"     0    0    1    1    1 horizontal]	
+    set drawPath     [CreateScale $name $root  drawPath      "drawPath"         1    0    1    1    1 horizontal]
+    set sweepSlices  [CreateScale $name $root  sweepSlices   "sweepSlices"     60    8   80    2    1 horizontal]
+    set funwidth     [CreateScale $name $root  funwidth      "funnel width"     0.2  0.1  4.0  0.1  1 horizontal]
+    set rimrad       [CreateScale $name $root  rimrad        "rim radius"       0.1  0.01 0.2  0.01 1 horizontal]
+    set rimgon       [CreateScale $name $root  rimgon        "rim N-gon"        6    3   12    1    1 horizontal]
+  
+    pack  $d  $r  $a  $t  $p   $z     -side top -fill x
+  }
+
+  CreateFunUI $winName f
+}
+## for z=2.0 this creates another entanglement of the 4 rings with opposite twistedness of the 4 ribbons.
+## without control over the convexity/concavity of the ribbons and junctions, this different sculpture looks better.
+## to make the original Perry TETRA sculpture, the facet insertion between the rings may have to be altered
+## to give less of a "fold-over" at the three valence-3 junctions.
+
+
+
+# cross section, valid for all the rings:
+point fa  ({expr  $f_funwidth}  0  0 ) endpoint
+point fb  ( 0  0  0 ) endpoint
+point fc  ( 0  0.1  0 ) endpoint
+
+polyline xsf  pointlist (fa fb fc)  endpolyline     ## ribbon with a kink at the end for sculpture rims
+
+crosssection csFun   type polyline  xsf   endcrosssection
+
+
+crosssection csRim
+  type circle
+  radius {expr  $f_rimrad}
+  slices {expr  $f_rimgon}
+endcrosssection
+
+#############################################################################
+
+####  YELLOW  SWEEP-PATH:   hexagon control polygon, originally in x-y-plane:
+
+point f0  ( {expr $f_r*( cos($f_a*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin($f_a*$to_rad)*sin($f_p*$to_rad) ) +$f_d }  
+            {expr $f_r*( sin($f_a*$to_rad)*cos($f_p*$to_rad) + cos($f_a*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) +$f_d }    
+            {expr $f_r*cos($f_a*$to_rad)*sin($f_t*$to_rad)  +$f_z })
+endpoint
+point f1  ( {expr $f_r*( cos(($f_a+60)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+60)*$to_rad)*sin($f_p*$to_rad) ) +$f_d }  
+            {expr $f_r*( sin(($f_a+60)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+60)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) +$f_d }    
+            {expr $f_r*cos(($f_a+60)*$to_rad)*sin($f_t*$to_rad)  +$f_z })
+endpoint
+point f2  ( {expr $f_r*( cos(($f_a+120)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+120)*$to_rad)*sin($f_p*$to_rad) ) +$f_d }  
+            {expr $f_r*( sin(($f_a+120)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+120)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) +$f_d }    
+            {expr $f_r*cos(($f_a+120)*$to_rad)*sin($f_t*$to_rad)  +$f_z })
+endpoint
+point f3  ( {expr $f_r*( cos(($f_a+180)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+180)*$to_rad)*sin($f_p*$to_rad) ) +$f_d }  
+            {expr $f_r*( sin(($f_a+180)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+180)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) +$f_d }    
+            {expr $f_r*cos(($f_a+180)*$to_rad)*sin($f_t*$to_rad)  +$f_z })
+endpoint
+point f4  ( {expr $f_r*( cos(($f_a+240)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+240)*$to_rad)*sin($f_p*$to_rad) ) +$f_d }  
+            {expr $f_r*( sin(($f_a+240)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+240)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) +$f_d }    
+            {expr $f_r*cos(($f_a+240)*$to_rad)*sin($f_t*$to_rad)  +$f_z })
+endpoint
+point f5  ( {expr $f_r*( cos(($f_a+300)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+300)*$to_rad)*sin($f_p*$to_rad) ) +$f_d }  
+            {expr $f_r*( sin(($f_a+300)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+300)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) +$f_d }    
+            {expr $f_r*cos(($f_a+300)*$to_rad)*sin($f_t*$to_rad)  +$f_z })
+endpoint
+
+
+bsplinecurve funsplineF
+  order 4   ## =cubic
+  controlpointlist ( f5  f0 f1 f2 f3 f4 f5 f0  f1 )  
+  slices {expr $f_sweepSlices}
+  drawcontrols {expr $f_drawControls}
+endbsplinecurve
+
+
+sweep  funnelF
+  path  funsplineF
+    minimizetorsion  {expr $f_minTorsion}
+    azimuth  {expr $f_fazim}
+    twist    {expr $f_twist}
+  endpath
+
+  crosssection csRim  endcrosssection  
+
+  drawpath {expr $f_drawPath}
+  drawsweep {expr $f_drawSweep}
+  solid SLF_HOLLOW
+endsweep
+
+###########################################################################
+
+####  BLUE  SWEEP-PATH:   hexagon control polygon, originally in x-y-plane:
+
+point b0  ( {expr $f_r*( cos($f_a*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin($f_a*$to_rad)*sin($f_p*$to_rad) ) +$f_d }  
+            {expr -$f_r*( sin($f_a*$to_rad)*cos($f_p*$to_rad) + cos($f_a*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) -$f_d }    
+            {expr -$f_r*cos($f_a*$to_rad)*sin($f_t*$to_rad)  -$f_z })
+endpoint
+point b1  ( {expr $f_r*( cos(($f_a+60)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+60)*$to_rad)*sin($f_p*$to_rad) ) +$f_d }  
+            {expr -$f_r*( sin(($f_a+60)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+60)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) -$f_d }    
+            {expr -$f_r*cos(($f_a+60)*$to_rad)*sin($f_t*$to_rad)  -$f_z })
+endpoint
+point b2  ( {expr $f_r*( cos(($f_a+120)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+120)*$to_rad)*sin($f_p*$to_rad) ) +$f_d }  
+            {expr -$f_r*( sin(($f_a+120)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+120)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) -$f_d }    
+            {expr -$f_r*cos(($f_a+120)*$to_rad)*sin($f_t*$to_rad)  -$f_z })
+endpoint
+point b3  ( {expr $f_r*( cos(($f_a+180)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+180)*$to_rad)*sin($f_p*$to_rad) ) +$f_d }  
+            {expr -$f_r*( sin(($f_a+180)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+180)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) -$f_d }    
+            {expr -$f_r*cos(($f_a+180)*$to_rad)*sin($f_t*$to_rad)  -$f_z })
+endpoint
+point b4  ( {expr $f_r*( cos(($f_a+240)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+240)*$to_rad)*sin($f_p*$to_rad) ) +$f_d }  
+            {expr -$f_r*( sin(($f_a+240)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+240)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) -$f_d }    
+            {expr -$f_r*cos(($f_a+240)*$to_rad)*sin($f_t*$to_rad)  -$f_z })
+endpoint
+point b5  ( {expr $f_r*( cos(($f_a+300)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+300)*$to_rad)*sin($f_p*$to_rad) ) +$f_d }  
+            {expr -$f_r*( sin(($f_a+300)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+300)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) -$f_d }    
+            {expr -$f_r*cos(($f_a+300)*$to_rad)*sin($f_t*$to_rad)  -$f_z })
+endpoint
+
+
+bsplinecurve funsplineB
+  order 4   ## =cubic
+  controlpointlist ( b5  b0 b1 b2 b3 b4 b5 b0  b1 )  
+  slices {expr $f_sweepSlices}
+  drawcontrols {expr $f_drawControls}
+endbsplinecurve
+
+
+sweep  funnelB
+  path  funsplineB
+    minimizetorsion  {expr $f_minTorsion}
+    azimuth  {expr $f_fazim}
+    twist    {expr $f_twist}
+  endpath
+
+  crosssection csRim  endcrosssection  
+
+  drawpath {expr $f_drawPath}
+  drawsweep {expr $f_drawSweep}
+  solid SLF_HOLLOW
+endsweep
+
+
+
+###########################################################################
+
+####  UNIFORM  SWEEP-PATH:   hexagon control polygon, originally in x-y-plane:
+
+point u0  ( {expr -$f_r*( cos($f_a*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin($f_a*$to_rad)*sin($f_p*$to_rad) ) -$f_d }  
+            {expr -$f_r*( sin($f_a*$to_rad)*cos($f_p*$to_rad) + cos($f_a*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) -$f_d }    
+            {expr $f_r*cos($f_a*$to_rad)*sin($f_t*$to_rad)  +$f_z })
+endpoint
+point u1  ( {expr -$f_r*( cos(($f_a+60)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+60)*$to_rad)*sin($f_p*$to_rad) ) -$f_d }  
+            {expr -$f_r*( sin(($f_a+60)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+60)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) -$f_d }    
+            {expr $f_r*cos(($f_a+60)*$to_rad)*sin($f_t*$to_rad)  +$f_z })
+endpoint
+point u2  ( {expr -$f_r*( cos(($f_a+120)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+120)*$to_rad)*sin($f_p*$to_rad) ) -$f_d }  
+            {expr -$f_r*( sin(($f_a+120)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+120)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) -$f_d }    
+            {expr $f_r*cos(($f_a+120)*$to_rad)*sin($f_t*$to_rad)  +$f_z })
+endpoint
+point u3  ( {expr -$f_r*( cos(($f_a+180)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+180)*$to_rad)*sin($f_p*$to_rad) ) -$f_d }  
+            {expr -$f_r*( sin(($f_a+180)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+180)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) -$f_d }    
+            {expr $f_r*cos(($f_a+180)*$to_rad)*sin($f_t*$to_rad)  +$f_z })
+endpoint
+point u4  ( {expr -$f_r*( cos(($f_a+240)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+240)*$to_rad)*sin($f_p*$to_rad) ) -$f_d }  
+            {expr -$f_r*( sin(($f_a+240)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+240)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) -$f_d }    
+            {expr $f_r*cos(($f_a+240)*$to_rad)*sin($f_t*$to_rad)  +$f_z })
+endpoint
+point u5  ( {expr -$f_r*( cos(($f_a+300)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+300)*$to_rad)*sin($f_p*$to_rad) ) -$f_d }  
+            {expr -$f_r*( sin(($f_a+300)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+300)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) -$f_d }    
+            {expr $f_r*cos(($f_a+300)*$to_rad)*sin($f_t*$to_rad)  +$f_z })
+endpoint
+
+
+
+
+bsplinecurve funsplineU
+  order 4   ## =cubic
+  controlpointlist ( u5  u0 u1 u2 u3 u4 u5 u0  u1 )  
+  slices {expr $f_sweepSlices}
+  drawcontrols {expr $f_drawControls}
+endbsplinecurve
+
+
+sweep  funnelU
+  path  funsplineU
+    minimizetorsion  {expr $f_minTorsion}
+    azimuth  {expr $f_fazim}
+    twist    {expr $f_twist}
+  endpath
+
+  crosssection csRim  endcrosssection  
+
+  drawpath {expr $f_drawPath}
+  drawsweep {expr $f_drawSweep}
+  solid SLF_HOLLOW
+endsweep
+
+###########################################################################
+
+####  GREEN  SWEEP-PATH:   hexagon control polygon, originally in x-y-plane:
+
+point g0  ( {expr -$f_r*( cos($f_a*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin($f_a*$to_rad)*sin($f_p*$to_rad) ) -$f_d }  
+            {expr $f_r*( sin($f_a*$to_rad)*cos($f_p*$to_rad) + cos($f_a*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) +$f_d }    
+            {expr -$f_r*cos($f_a*$to_rad)*sin($f_t*$to_rad)  -$f_z })
+endpoint
+point g1  ( {expr -$f_r*( cos(($f_a+60)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+60)*$to_rad)*sin($f_p*$to_rad) ) -$f_d }  
+            {expr $f_r*( sin(($f_a+60)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+60)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) +$f_d }    
+            {expr -$f_r*cos(($f_a+60)*$to_rad)*sin($f_t*$to_rad)  -$f_z })
+endpoint
+point g2  ( {expr -$f_r*( cos(($f_a+120)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+120)*$to_rad)*sin($f_p*$to_rad) ) -$f_d }  
+            {expr $f_r*( sin(($f_a+120)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+120)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) +$f_d }    
+            {expr -$f_r*cos(($f_a+120)*$to_rad)*sin($f_t*$to_rad)  -$f_z })
+endpoint
+point g3  ( {expr -$f_r*( cos(($f_a+180)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+180)*$to_rad)*sin($f_p*$to_rad) ) -$f_d }  
+            {expr $f_r*( sin(($f_a+180)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+180)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) +$f_d }    
+            {expr -$f_r*cos(($f_a+180)*$to_rad)*sin($f_t*$to_rad)  -$f_z })
+endpoint
+point g4  ( {expr -$f_r*( cos(($f_a+240)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+240)*$to_rad)*sin($f_p*$to_rad) ) -$f_d }  
+            {expr $f_r*( sin(($f_a+240)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+240)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) +$f_d }    
+            {expr -$f_r*cos(($f_a+240)*$to_rad)*sin($f_t*$to_rad)  -$f_z })
+endpoint
+point g5  ( {expr -$f_r*( cos(($f_a+300)*$to_rad)*cos($f_t*$to_rad)*cos($f_p*$to_rad) - sin(($f_a+300)*$to_rad)*sin($f_p*$to_rad) ) -$f_d }  
+            {expr $f_r*( sin(($f_a+300)*$to_rad)*cos($f_p*$to_rad) + cos(($f_a+300)*$to_rad)*cos($f_t*$to_rad)*sin($f_p*$to_rad) ) +$f_d }    
+            {expr -$f_r*cos(($f_a+300)*$to_rad)*sin($f_t*$to_rad)  -$f_z })
+endpoint
+
+
+bsplinecurve funsplineG
+  order 4   ## =cubic
+  controlpointlist ( g5  g0 g1 g2 g3 g4 g5 g0  g1 )  
+  slices {expr $f_sweepSlices}
+  drawcontrols {expr $f_drawControls}
+endbsplinecurve
+
+
+sweep  funnelG
+  path  funsplineG
+    minimizetorsion  {expr $f_minTorsion}
+    azimuth  {expr $f_fazim}
+    twist    {expr $f_twist}
+  endpath
+
+  crosssection csRim  endcrosssection  
+
+  drawpath {expr $f_drawPath}
+  drawsweep {expr $f_drawSweep}
+  solid SLF_HOLLOW
+endsweep
+
+
+####  putinng in the control polyhedron for the connecting surface #####################
+
+
+face f0 (f3 f2 u4 u3 )   endface 
+face f1 (f4 f3 u3 u2 )   endface 
+
+face f2 (g3 g2 b4 b3 )   endface 
+face f3 (g4 g3 b3 b2 )   endface 
+
+face f4 (f0 f5 b5 b4 )   endface 
+face f5 (f5 f4 b0 b5 )   endface 
+
+face f6 (f2 f1 g1 g0 )   endface 
+face f7 (f1 f0 g2 g1 )   endface 
+
+face f8 (g0 g5 u5 u4 )   endface 
+face f9 (g5 g4 u0 u5 )   endface 
+
+face f10 (b1 b0 u2 u1 )   endface 
+face f11 (b2 b1 u1 u0 )   endface 
+
+
+
+face f17 (b4 g2 f0 )   endface 
+face f18 (g4 b2 u0 )   endface 
+face f19 (u4 f2 g0 )   endface 
+face f16 (f4 u2 b0 )   endface 
+
+
+face b0 (f2 f3 u3 u4 )   endface 
+face b1 (f3 f4 u2 u3 )   endface 
+
+face b2 (g2 g3 b3 b4 )   endface 
+face b3 (g3 g4 b2 b3 )   endface 
+
+face b4 (f5 f0 b4 b5 )   endface 
+face b5 (f4 f5 b5 b0 )   endface 
+
+face b6 (f1 f2 g0 g1 )   endface 
+face b7 (f0 f1 g1 g2 )   endface 
+
+face b8 (g5 g0 u4 u5 )   endface 
+face b9 (g4 g5 u5 u0 )   endface 
+
+face b10 (b0 b1 u1 u2 )   endface 
+face b11 (b1 b2 u0 u1 )   endface 
+
+
+
+face b16 (u2 f4 b0 )   endface 
+face b17 (g2 b4 f0 )   endface 
+face b18 (b2 g4 u0 )   endface 
+face b19 (f2 u4 g0 )   endface 
+
+
+object fsurf (f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11  f16 f17 f18 f19)   endobject
+object bsurf (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11  b16 b17 b18 b19)   endobject
+
+
+#########################################################################################
+
+#######################################################
+subdivision fSDsurf
+
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)}
+  errormetric {expr $oSubdivision(errormetric)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawcurrent {expr $oSubdivision(drawcurrent)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+  vknots {expr $oSubdivision(a)}
+  vorder {expr $oSubdivision(b)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+  instance fsurf    endinstance
+
+endsubdivision
+
+
+#######################################################
+(*
+subdivision bSDsurf
+
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)}
+  errormetric {expr $oSubdivision(errormetric)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawcurrent {expr $oSubdivision(drawcurrent)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+  vknots {expr $oSubdivision(a)}
+  vorder {expr $oSubdivision(b)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+  instance bsurf    endinstance
+
+endsubdivision
+*)
+#######################################################
+
+#######################################################
+
+offset oOffset
+  lod {expr $oOffset(lod)}
+  shading {expr $oOffset(shading)}
+
+  type  {expr $oOffset(type)}    ###  SLF_OFFSET_PERFORATED ## 
+
+  height  {expr $oOffset(height)}   ###  0.10  ## {expr $par_ghgt}    ##
+  width   {expr $oOffset(width)}    ###  0.05  ## {expr $par_gwid}    ##
+  drawcontrols {expr $oOffset(drawcontrols)}
+
+  instance  fSDsurf     endinstance
+endoffset
+
+#######################################################
+
+
+##########   Putting it all together  ###################
+
+group assembly
+  instance coord_axes   scale( 8 8 8 )  endinstance
+  instance cube   surface  K  scale({expr 3*$f_d} {expr 3*$f_d} {expr 3*$f_d})   endinstance
+
+
+  instance oOffset surface  O   endinstance
+
+endgroup
+
+
+####  Some surface colors  ################################
+
+surface R color (1 0 0) endsurface     # Red
+surface O color (0.9 0.6 0) endsurface # Orange
+surface Y color (1 1 0) endsurface     # Yellow
+surface L color (0.6 0.8 0) endsurface # Lime
+surface G color (0 0.9 0) endsurface   # Green
+surface A color (0 0.9 0.7) endsurface # Aqua
+surface C color (0 1 1) endsurface     # Cyan
+surface U color (0 0.5 1) endsurface   # Uniform
+surface B color (0 0 1) endsurface     # Blue
+surface P color (0.6 0 1) endsurface   # Purple
+surface M color (1 0 1) endsurface     # Magenta
+surface Z color (1 0 0.5) endsurface   # Zinnober
+
+surface K color (0 0 0) endsurface     # blacK
+surface W color (1 1 1) endsurface     # White
+
+
+###########################################################
+# A generic setup for viewing SLF objects
+##########################################
+
+group world
+  lod {expr $gRoot_lod}
+  shading {expr $gRoot_shading}
+
+  instance  assembly   scale( 0.01 0.01 0.01 )   rotate(0 0 1)(-90)  endinstance     
+
+  instance amb
+    id main_amb
+  endinstance
+  instance sun
+    id front_sun
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+  instance anti_sun
+    id back_sun
+    rotate (1 0 0) (180)
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+endgroup
+
+
+light amb
+  type SLF_AMBIENT
+  color (0.4 0.4 0.4)
+endlight
+
+light sun
+  type SLF_DIRECTIONAL
+  color (0.5 0.5 0.5)
+endlight
+
+light anti_sun
+  type SLF_DIRECTIONAL
+  color (0.3 0.3 0.3)
+endlight
+
+
+camera cam   
+## choose one or the other mode:
+
+#  projection SLF_PARALLEL
+#  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 2.0)
+
+  projection SLF_PERSPECTIVE
+  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 -0.01)
+endcamera
+
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0.0 0.0 1 )
+  endinstance
+endgroup
+
+window Window
+  background (0.7 0.7 0.7)
+endwindow
+
+viewport vp Window
+endviewport
+
+render vp gCam.iCam.cam world 
+  light world.front_sun.sun
+  light world.back_sun.anti_sun
+  light world.main_amb.amb
+endrender
+
+########################################
+
+
