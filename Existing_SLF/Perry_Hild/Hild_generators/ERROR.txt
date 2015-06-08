@@ -1,1 +1,3 @@
 Semantic checking error for HildSpecs2 (Eric's file).
+
+ERROR of loading the texture file. tex_rims.gif and tex_tunnel.gif
