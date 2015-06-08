@@ -1,0 +1,12 @@
+PLAN: Mimick Perry_Tetra4_offset.slf to get the subdivision of continuum.
+
+1. READ Perry_Tetra4_offset.slf and find how does it work.
+
+2. Subdivide one of the six parts of continuum.
+
+2.1 Find the points
+2.2 Write subdivision code
+2.3 Find how to mirror them to other 5 parts
+2.4 Does it have the mobius issue?
+
+3. Send a screenshot to Prof. CHS
