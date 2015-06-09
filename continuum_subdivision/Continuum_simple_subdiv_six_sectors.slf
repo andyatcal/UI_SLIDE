@@ -380,7 +380,7 @@ group assembly
   instance wedge surface   R   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
 *)
   instance fSDsurf surface   L   endinstance
-(*
+
   instance fSDsurf surface   L   rotate(0 1 0)(180)  endinstance
 
   instance fSDsurf surface   L   rotate(0 0 1)(120)  endinstance
@@ -388,9 +388,9 @@ group assembly
 
   instance fSDsurf surface   L   rotate(0 0 1)(-120)  endinstance
   instance fSDsurf surface   L   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
-*)
+
   instance bSDsurf surface   A   endinstance
-(*
+
   instance bSDsurf surface   A   rotate(0 1 0)(180)  endinstance
 
   instance bSDsurf surface   A   rotate(0 0 1)(120)  endinstance
@@ -398,7 +398,7 @@ group assembly
 
   instance bSDsurf surface   A   rotate(0 0 1)(-120)  endinstance
   instance bSDsurf surface   A   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
-*)
+
 #  instance oOffset surface  O   endinstance
 
 endgroup
