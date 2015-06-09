@@ -1,0 +1,708 @@
+### HildGen2.slf
+#   A program to create surface sculptures in the style of Eva Hild's ceramic sculptures.
+#   Approach: place the defining "rims", "funnels" and "tunnels" in the design space,
+#
+##  Later add connecting branches between the above 1D-manifolds to make a crude polyhedral approximation
+#   of the desired surface topology. Then use subdivision to smooth that surface.
+
+##  ALL the basic constructs are parametrized shapes based on polylines and B-splines. 
+##  Rims are defined by a B-spline sweep path with a special polyline cross section showing a square rim-tube and an attached flange.
+##  Funnels are special rims with a circular shape; the n-gon circle approximation is adjustable.
+##  Tunnels are c-shaped segments of double n-gons connected by a prismatic cylinder surface; 
+##   they are based on a 3-point polyline sweep path and have a circular-arc cross section (realized with a B-spline with a variable number of slices.
+##   they are used for internal, rim-less through-passages.
+
+##  This is a generalization and further development of Interrupt2.slf
+##  All defining curces and features are now based on B-Splines, so that they can be re-sampled with a chosen number of slices.
+##  This is a simplified and cealned-up file that allows the outputting of a .SIF file, showing the transformed, absolute vertex coordinates.
+
+### CHS 2014/11/21
+
+
+###################################################
+
+## general links and definitions:
+
+tclinit {
+  set winName .slfWindow
+
+  source SLIDEUI.tcl
+  source MATH.tcl
+
+  set to_rad [expr $SLF_PI/180.0 ]
+  CreateGroupUI $winName gRoot
+}
+
+
+#####  Some elementary geometry   #################
+
+## Coordinate axes:
+point ooo  ( 0 0 0 ) endpoint
+point xoo  ( 1 0 0 ) endpoint
+point oyo  ( 0 1 0 ) endpoint
+point ooz  ( 0 0 1 ) endpoint
+
+polyline xaxis pointlist (ooo xoo) endpolyline
+polyline yaxis pointlist (ooo oyo) endpolyline
+polyline zaxis pointlist (ooo ooz) endpolyline
+
+group coord_axes
+  instance xaxis surface R endinstance
+  instance yaxis surface B endinstance
+  instance zaxis surface G endinstance
+endgroup
+
+###################################################
+
+# a reference cube -- 
+point XYZ  ( 1  1  1 ) endpoint
+point XYC  ( 1  1  -1 ) endpoint
+point XBZ  ( 1  -1  1 ) endpoint
+point XBC  ( 1  -1  -1 ) endpoint
+point AYZ  ( -1  1  1 ) endpoint
+point AYC  ( -1  1  -1 ) endpoint
+point ABZ  ( -1  -1  1 ) endpoint
+point ABC  ( -1  -1  -1 ) endpoint
+
+face c1   (XYZ XBZ XBC XYC ) endface
+face c2   (XYZ XYC AYC AYZ ) endface
+face c3   (AYZ AYC ABC ABZ ) endface
+face c4   (ABZ ABC XBC XBZ ) endface
+face c5   (XYZ AYZ ABZ XBZ ) endface
+face c6   (XYC XBC ABC AYC ) endface
+
+object cube (c1 c2 c3 c4 c5 c6)    solid SLF_HOLLOW   shading SLF_WIRE   endobject
+
+####  The Rim, Funnel, and Tunnel generators need to be replicated as needed  ###########################
+####     This could be split out into separate files, to keep the bulk of the main program small  #######
+
+
+########  Rim and Funnel Tube+Ribbon Cross Section  ##################
+
+point rx0  ( 0  0  0 ) endpoint
+#point rx_  ( {expr -$aRim_ribwidth} 0  0 ) endpoint
+
+point rxa  ( {expr  $aRim_ribwidth} 0  0 ) endpoint
+point rxb  ( {expr  $aRim_rimtube}  0.05  0 ) endpoint
+point rxc  ( 0  {expr  $aRim_rimtube}  0 ) endpoint
+point rxd  ( {expr -$aRim_rimtube}  0  0 ) endpoint
+point rxe  ( 0  {expr -$aRim_rimtube}  0 ) endpoint
+point rxf  ( {expr  $aRim_rimtube} -0.05  0 ) endpoint
+point rxg  ({expr  $aRim_ribwidth}  0  0 ) endpoint
+
+polyline rib1  pointlist ( rxa rxb rxc rxd rxe rxf rxg )  endpolyline     ## ribbon with a square tube at the end for sculpture rims
+polyline rib0  pointlist ( rxa rx0 )  endpolyline                         ## simple ribbon extending from rim into surface
+
+crosssection csRib1
+  type polyline  rib1
+endcrosssection
+
+crosssection csRib0
+  type polyline  rib0
+endcrosssection
+
+
+
+##############  "RIM" generator "aRim"  ###################
+
+tclinit {
+  
+  proc Create_aRimUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set topX     [CreateScale $name $root  topX    "ribbon topX"      3    1    10    0.1   1 horizontal]
+    set topZ     [CreateScale $name $root  topZ    "ribbon topZ"      8    1    15    0.1   1 horizontal]
+    set bckY     [CreateScale $name $root  bckY    "ribbon bckY"      7    1    15    0.1   1 horizontal]
+    set bckZ     [CreateScale $name $root  bckZ    "ribbon bckZ"     -1   -9    10    0.1   1 horizontal]
+
+    set bSpread   [CreateScale $name $root  bSpread  "bottom-Spread"   1.0    0.5   2    0.1   1 horizontal]
+
+    set sweepSlices  [CreateScale $name $root  sweepSlices   "sweepSlices"     12    12    80    2    1 horizontal]
+    set minTorsion   [CreateScale $name $root  minTorsion    "minTorsion"       0     0     1    1    1 horizontal]
+    set azimuth      [CreateScale $name $root  azimuth       "azimuth"          0  -180   180    1    1 horizontal]
+    set twist        [CreateScale $name $root  twist         "twist"            0   -90    90    1    1 horizontal]
+    set drawSweep    [CreateScale $name $root  drawSweep     "drawSweep"        1     0     1    1    1 horizontal]
+    set drawControls [CreateScale $name $root  drawControls  "drawControls"     0     0     1    1    1 horizontal]	
+    set drawPath     [CreateScale $name $root  drawPath      "drawPath"         1     0     1    1    1 horizontal]
+    set ribwidth     [CreateScale $name $root  ribwidth      "ribbon width"     1.0   0.2   2.0  0.1  1 horizontal]
+    set rimtube      [CreateScale $name $root  rimtube       "rim tube rad"     0.1   0.01  0.3  0.01 1 horizontal]
+ 
+    pack    $topX $topZ  $bckY $bckZ  $sweepSlices   $azimuth  $twist   $drawSweep      $ribwidth  $rimtube   -side top -fill x
+  }
+
+  Create_aRimUI $winName aRim
+}
+
+
+#######  aRim Sweep Path  ############################################
+
+point ar0  ( 0 -6  -7 ) endpoint
+point ar1  ( 6 -6  -5 ) endpoint
+point ar2  ( 7 -6  -1 ) endpoint
+point ar3  ( {expr $aRim_topX} -6  {expr $aRim_topZ} ) endpoint
+point ar4  ( {expr $aRim_topX}  6  {expr $aRim_topZ} ) endpoint
+point ar5  ( 6  {expr $aRim_bckY}  {expr $aRim_bckZ} ) endpoint
+point ar6  ( 0  {expr $aRim_bckY+2}  {expr $aRim_bckZ-2} ) endpoint
+point ar7  (-6  {expr $aRim_bckY}  {expr $aRim_bckZ} ) endpoint
+point ar8  ( {expr -$aRim_topX}  6  {expr $aRim_topZ} ) endpoint
+point ar9  ( {expr -$aRim_topX} -6  {expr $aRim_topZ} ) endpoint
+point ar10 (-7 -6  -1 ) endpoint
+point ar11 (-6 -6  -5 ) endpoint
+
+controlpoint car0   point ar0  rotate(0 0 90)  endcontrolpoint
+controlpoint car1   point ar1  rotate(0 0 90)  endcontrolpoint
+controlpoint car2   point ar2  rotate(0 0 90)  endcontrolpoint
+controlpoint car3   point ar3  rotate(0 0 -90)  endcontrolpoint
+controlpoint car4   point ar4  rotate(0 0 -90)  endcontrolpoint
+controlpoint car5   point ar5  rotate(0 0 90)  endcontrolpoint
+controlpoint car6   point ar6  rotate(0 0 90)  endcontrolpoint
+controlpoint car7   point ar7  rotate(0 0 90)  endcontrolpoint
+controlpoint car8   point ar8  rotate(0 0 -90)  endcontrolpoint
+controlpoint car9   point ar9  rotate(0 0 -90)  endcontrolpoint
+controlpoint car10  point ar10 rotate(0 0 90)  endcontrolpoint
+controlpoint car11  point ar11 rotate(0 0 90)  endcontrolpoint
+
+polyline aRimctrl  pointlist ( ar0 ar1 ar2 ar3 ar4 ar5 ar6 ar7 ar8 ar9 ar10 ar11 ar0 )  endpolyline    ## control polygon 
+
+bsplinecurve aRimSpline
+  order 4   ## =cubic
+#  controlpointlist ( car11 car0 car1 car2 car3 car4 car5 car6 car7 car8 car9 car10 car11 car0 car1 )    ## closing, with one segment overlap (re-use) at either end
+  controlpointlist ( car1 car0 car11 car10 car9 car8 car7 car6 car5 car4 car3 car2 car1 car0 car11 )    ## reversed orientation of the generated rim-ribbon
+  slices {expr $aRim_sweepSlices}
+  drawcontrols {expr $aRim_drawControls}
+endbsplinecurve
+
+
+sweep  aRim
+#  path  aRimctrl                 ### show band on control poly, rather than the smoothed version
+  path  aRimSpline
+    minimizetorsion  {expr $aRim_minTorsion}
+    azimuth  {expr $aRim_azimuth}
+    twist    {expr $aRim_twist}
+  endpath
+#  crosssection csRib1       begincap 1   endcap 0    endcrosssection  
+  crosssection csRib0     endcrosssection  
+  drawpath {expr $aRim_drawPath}
+  drawsweep {expr $aRim_drawSweep}
+endsweep
+
+
+
+#######################  FUNNEL "fFun"   == a special circular rim   ##########################
+
+tclinit {
+  
+  proc Create_fFunUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set r     [CreateScale $name $root  r          "funnel-radius"    4.5    1     9    0.1    1 horizontal]
+    set a     [CreateScale $name $root  a          "funnel-alpha"     0   -180   180    0.5    1 horizontal]
+    set t     [CreateScale $name $root  t          "funnel-theta"     0    -90    90    1      1 horizontal]
+    set p     [CreateScale $name $root  p          "funnel-phi"     -90   -180   180    1      1 horizontal]
+    set x     [CreateScale $name $root  x          "funnel x-pos"     0.0   -4     4    0.1    1 horizontal]
+    set y     [CreateScale $name $root  y          "funnel y-pos"     1.6   -4     6    0.1    1 horizontal]
+    set z     [CreateScale $name $root  z          "funnel z-pos"    -8.0   -9     0    0.1    1 horizontal]
+
+    set sweepSlices  [CreateScale $name $root  sweepSlices   "sweepSlices"     12    8   80    2    1 horizontal]
+    set minTorsion   [CreateScale $name $root  minTorsion    "minTorsion"       0    0    1    1    1 horizontal]
+    set fazim        [CreateScale $name $root  fazim         "funnel-azimuth" 100  -90  180    1    1 horizontal]
+    set twist        [CreateScale $name $root  twist         "twist"            0  -90   90    1    1 horizontal]
+    set drawSweep    [CreateScale $name $root  drawSweep     "drawSweep"        1    0    1    1    1 horizontal]
+    set drawControls [CreateScale $name $root  drawControls  "drawControls"     0    0    1    1    1 horizontal]	
+    set drawPath     [CreateScale $name $root  drawPath      "drawPath"         1    0    1    1    1 horizontal]
+  
+    pack  $r  $a  $t  $p  $x  $y  $z  $sweepSlices    $fazim  $twist    $drawSweep       -side top -fill x
+  }
+
+  Create_fFunUI $winName fFun
+}
+
+
+####  SWEEP-PATH:   octagonal control polygon in x-y-plane:
+
+point ff0  ( {expr  $fFun_r}        0                   0 ) endpoint
+point ff1  ( {expr  $fFun_r*0.707}  {expr  $fFun_r*0.707}  0 ) endpoint
+point ff2  ( 0                   {expr  $fFun_r}        0 ) endpoint
+point ff3  ( {expr -$fFun_r*0.707}  {expr  $fFun_r*0.707}  0 ) endpoint
+point ff4  ( {expr -$fFun_r}        0                   0 ) endpoint
+point ff5  ( {expr -$fFun_r*0.707}  {expr -$fFun_r*0.707}  0 ) endpoint
+point ff6  ( 0                   {expr -$fFun_r}        0 ) endpoint
+point ff7  ( {expr  $fFun_r*0.707}  {expr -$fFun_r*0.707}  0 ) endpoint
+
+bsplinecurve fFunSpline
+  order 4   ## =cubic
+  controlpointlist ( ff7  ff0 ff1 ff2 ff3 ff4 ff5 ff6 ff7 ff0  ff1 )  
+  slices {expr $fFun_sweepSlices}
+  drawcontrols {expr $fFun_drawControls}
+endbsplinecurve
+
+sweep  fFun
+  path  fFunSpline
+    minimizetorsion  {expr $fFun_minTorsion}
+    azimuth  {expr $fFun_fazim}
+    twist    {expr $fFun_twist}
+  endpath
+#  crosssection  csRib1  endcrosssection  
+  crosssection  csRib0  endcrosssection  
+  drawpath {expr $fFun_drawPath}
+  drawsweep {expr $fFun_drawSweep}
+endsweep
+
+
+
+#######################  TUNNEL "tTun"  == a special circular double funnel    ########################
+#######################    To make two open contours to pull surface stronger towards it.  ############
+
+tclinit {
+  
+  proc Create_tTunUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set ttr    [CreateScale $name $root  ttr    "tun. mid-radius"    2.0    1.0   9.0  0.1    1 horizontal]
+    set tti    [CreateScale $name $root  tti    "tun.in  r-scale"    1.2    0.5   2.0  0.1    1 horizontal]
+    set ttm    [CreateScale $name $root  ttm    "tun.mid r-scale"    0.9    0.5   2.0  0.1    1 horizontal]
+    set tte    [CreateScale $name $root  tte    "tun.end r-scale"    1.2    0.5   2.0  0.1    1 horizontal]
+    set ttl    [CreateScale $name $root  ttl    "tunnel length"      1.4    0.1   4    0.1    1 horizontal]
+    set ha     [CreateScale $name $root  ha     "C-half-angle"     180.0    1   180    1      1 horizontal]
+
+    set a     [CreateScale $name $root  a       "tunnel-alpha"       0.0  -180   180    1      1 horizontal]
+    set t     [CreateScale $name $root  t       "tunnel-theta"      90.0  -120   120    1      1 horizontal]
+    set p     [CreateScale $name $root  p       "tunnel-phi"         0.0  -180   180    1      1 horizontal]
+    set x     [CreateScale $name $root  x       "tunnel x-pos"       0.0   -4     4    0.1    1 horizontal]
+    set y     [CreateScale $name $root  y       "tunnel y-pos"       0.0   -4     6    0.1    1 horizontal]
+    set z     [CreateScale $name $root  z       "tunnel z-pos"       1.0   -4     8    0.1    1 horizontal]
+
+    set xSectSlices  [CreateScale $name $root  xSectSlices   "xSectSlices"      8    8   80    2    1 horizontal]
+    set minTorsion   [CreateScale $name $root  minTorsion    "minTorsion"       0    0    1    1    1 horizontal]
+    set tazim        [CreateScale $name $root  tazim         "tunnel-azimuth"   0  -90   90    1    1 horizontal]
+    set twist        [CreateScale $name $root  twist         "twist"            0  -90   90    1    1 horizontal]
+    set drawSweep    [CreateScale $name $root  drawSweep     "drawSweep"        1    0    1    1    1 horizontal]
+    set drawControls [CreateScale $name $root  drawControls  "drawControls"     0    0    1    1    1 horizontal]	
+    set drawPath     [CreateScale $name $root  drawPath      "drawPath"         1    0    1    1    1 horizontal]
+  
+    pack   $ttr $tti $ttm $tte  $ttl  $ha    $a  $t $p   $x  $y  $z  $xSectSlices  $tazim  $twist   $drawSweep       -side top -fill x
+  }
+  Create_tTunUI $winName tTun
+}
+
+
+####  TUNNEL SWEEP-PATH  for center of circular arc  ###################
+
+point  tti ( 0  0  {expr -$tTun_ttl} ) endpoint
+point  ttm ( 0  0  0) endpoint
+point  tte ( 0  0  {expr  $tTun_ttl} ) endpoint
+
+controlpoint  ctti   point tti   scale ({expr $tTun_tti} {expr $tTun_tti} {expr $tTun_tti})   endcontrolpoint
+controlpoint  cttm   point ttm   scale ({expr $tTun_ttm} {expr $tTun_ttm} {expr $tTun_ttm})   endcontrolpoint
+controlpoint  ctte   point tte   scale ({expr $tTun_tte} {expr $tTun_tte} {expr $tTun_tte})   endcontrolpoint
+## this allows to make tapered tunnels ##
+
+polyline tTunSweep  pointlist ( ctti cttm ctte ) endpolyline
+
+
+###  C-shaped cross section, approximated by B-spline  ###############
+
+point tt0  ( {expr  $tTun_ttr}  0  0 ) endpoint
+point tt1  ( {expr  $tTun_ttr*cos(  $to_rad*$tTun_ha/6)}  {expr  $tTun_ttr*sin(  $to_rad*$tTun_ha/6)}  0 ) endpoint
+point tt2  ( {expr  $tTun_ttr*cos(2*$to_rad*$tTun_ha/6)}  {expr  $tTun_ttr*sin(2*$to_rad*$tTun_ha/6)}  0 ) endpoint
+point tt3  ( {expr  $tTun_ttr*cos(3*$to_rad*$tTun_ha/6)}  {expr  $tTun_ttr*sin(3*$to_rad*$tTun_ha/6)}  0 ) endpoint
+point tt4  ( {expr  $tTun_ttr*cos(4*$to_rad*$tTun_ha/6)}  {expr  $tTun_ttr*sin(4*$to_rad*$tTun_ha/6)}  0 ) endpoint
+point tt5  ( {expr  $tTun_ttr*cos(5*$to_rad*$tTun_ha/6)}  {expr  $tTun_ttr*sin(5*$to_rad*$tTun_ha/6)}  0 ) endpoint
+point tt6  ( {expr  $tTun_ttr*cos(6*$to_rad*$tTun_ha/6)}  {expr  $tTun_ttr*sin(6*$to_rad*$tTun_ha/6)}  0 ) endpoint
+point tt7  ( {expr  $tTun_ttr*cos(7*$to_rad*$tTun_ha/6)}  {expr  $tTun_ttr*sin(7*$to_rad*$tTun_ha/6)}  0 ) endpoint
+
+point tt1_ ( {expr  $tTun_ttr*cos(  $to_rad*$tTun_ha/6)}  {expr -$tTun_ttr*sin(  $to_rad*$tTun_ha/6)}  0 ) endpoint
+point tt2_ ( {expr  $tTun_ttr*cos(2*$to_rad*$tTun_ha/6)}  {expr -$tTun_ttr*sin(2*$to_rad*$tTun_ha/6)}  0 ) endpoint
+point tt3_ ( {expr  $tTun_ttr*cos(3*$to_rad*$tTun_ha/6)}  {expr -$tTun_ttr*sin(3*$to_rad*$tTun_ha/6)}  0 ) endpoint
+point tt4_ ( {expr  $tTun_ttr*cos(4*$to_rad*$tTun_ha/6)}  {expr -$tTun_ttr*sin(4*$to_rad*$tTun_ha/6)}  0 ) endpoint
+point tt5_ ( {expr  $tTun_ttr*cos(5*$to_rad*$tTun_ha/6)}  {expr -$tTun_ttr*sin(5*$to_rad*$tTun_ha/6)}  0 ) endpoint
+point tt6_ ( {expr  $tTun_ttr*cos(6*$to_rad*$tTun_ha/6)}  {expr -$tTun_ttr*sin(6*$to_rad*$tTun_ha/6)}  0 ) endpoint
+point tt7_ ( {expr  $tTun_ttr*cos(7*$to_rad*$tTun_ha/6)}  {expr -$tTun_ttr*sin(7*$to_rad*$tTun_ha/6)}  0 ) endpoint
+
+polyline tTunCtrl  pointlist (  tt6_ tt5_ tt4_ tt3_ tt2_ tt1_ tt0 tt1 tt2 tt3 tt4 tt5 tt6  )  endpolyline     ## C-shaped cross section 
+
+bsplinecurve tTunSpline
+  order 4   ## =cubic
+#  controlpointlist ( tt7_ tt6_ tt5_ tt4_ tt3_ tt2_ tt1_ tt0 tt1 tt2 tt3 tt4 tt5 tt6 tt7 )  
+  controlpointlist ( tt7 tt6 tt5 tt4 tt3 tt2 tt1 tt0 tt1_ tt2_ tt3_ tt4_ tt5_ tt6_ tt7_ )    ## reversed direction to make an inside-out tunnel
+  slices {expr $tTun_xSectSlices}
+  drawcontrols {expr $tTun_drawControls}
+endbsplinecurve
+
+crosssection tTunXsect    type bsplinecurve tTunSpline   endcrosssection
+
+
+sweep  tTun
+  path  tTunSweep
+    minimizetorsion  {expr $tTun_minTorsion}
+    azimuth  {expr $tTun_tazim}
+    twist    {expr $tTun_twist}
+  endpath
+  crosssection tTunXsect  endcrosssection  
+  drawpath {expr $tTun_drawPath}
+  drawsweep {expr $tTun_drawSweep}
+#  solid SLF_HOLLOW
+endsweep
+
+
+#######################  TUNNEL "rTun"  == a partial circular tunnel ring    ########################
+
+tclinit {
+  
+  proc Create_rTunUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set ttr    [CreateScale $name $root  ttr    "tun. mid-radius"    3.0    1.0   9.0  0.1    1 horizontal]
+    set tti    [CreateScale $name $root  tti    "tun.in  r-scale"    1.0    0.5   2.0  0.1    1 horizontal]
+    set ttm    [CreateScale $name $root  ttm    "tun.mid r-scale"    1.0    0.5   2.0  0.1    1 horizontal]
+    set tte    [CreateScale $name $root  tte    "tun.end r-scale"    1.0    0.5   2.0  0.1    1 horizontal]
+    set ttl    [CreateScale $name $root  ttl    "tunnel length"      0.9    0.1   4    0.1    1 horizontal]
+    set ha     [CreateScale $name $root  ha     "C-half-angle"     140.0    1   180    1      1 horizontal]
+
+    set a     [CreateScale $name $root  a       "tunnel-alpha"      90.0  -180   180    1      1 horizontal]
+    set t     [CreateScale $name $root  t       "tunnel-theta"     -65.0  -120   120    1      1 horizontal]
+    set p     [CreateScale $name $root  p       "tunnel-phi"        90.0  -180   180    1      1 horizontal]
+    set x     [CreateScale $name $root  x       "tunnel x-pos"       0.0    -4     4    0.1    1 horizontal]
+    set y     [CreateScale $name $root  y       "tunnel y-pos"      -2.5    -4     6    0.1    1 horizontal]
+    set z     [CreateScale $name $root  z       "tunnel z-pos"      -4.0    -6     0    0.1    1 horizontal]
+
+    set xSectSlices  [CreateScale $name $root  xSectSlices   "xSectSlices"      6    6   60    2    1 horizontal]
+    set minTorsion   [CreateScale $name $root  minTorsion    "minTorsion"       0    0    1    1    1 horizontal]
+    set tazim        [CreateScale $name $root  tazim         "tunnel-azimuth"  90  -90   90    1    1 horizontal]
+    set twist        [CreateScale $name $root  twist         "twist"            0  -90   90    1    1 horizontal]
+    set drawSweep    [CreateScale $name $root  drawSweep     "drawSweep"        1    0    1    1    1 horizontal]
+    set drawControls [CreateScale $name $root  drawControls  "drawControls"     0    0    1    1    1 horizontal]	
+    set drawPath     [CreateScale $name $root  drawPath      "drawPath"         1    0    1    1    1 horizontal]
+  
+    pack   $ttr $tti $ttm $tte  $ttl  $ha    $a  $t $p   $x  $y  $z  $xSectSlices   $tazim  $twist   $drawSweep      -side top -fill x
+  }
+  Create_rTunUI $winName rTun
+}
+
+####  TUNNEL SWEEP-PATH  for center of circular arc  ###################
+
+point  rti ( 0  0  {expr -$rTun_ttl} ) endpoint
+point  rtm ( 0  0  0) endpoint
+point  rte ( 0  0  {expr  $rTun_ttl} ) endpoint
+
+controlpoint  crti   point rti   scale ({expr $rTun_tti} {expr $rTun_tti} {expr $rTun_tti})    endcontrolpoint
+controlpoint  crtm   point rtm   scale ({expr $rTun_ttm} {expr $rTun_ttm} {expr $rTun_ttm})    endcontrolpoint
+controlpoint  crte   point rte   scale ({expr $rTun_tte} {expr $rTun_tte} {expr $rTun_tte})    endcontrolpoint
+## this allows to make tapered tunnels ##
+
+polyline rTunSweep  pointlist ( crti crtm crte ) endpolyline
+
+
+###  C-shaped cross section, approximated by B-spline  ###############
+
+point rt0  ( {expr  $rTun_ttr}  0  0 ) endpoint
+point rt1  ( {expr  $rTun_ttr*cos(  $to_rad*$rTun_ha/6)}  {expr  $rTun_ttr*sin(  $to_rad*$rTun_ha/6)}  0 ) endpoint
+point rt2  ( {expr  $rTun_ttr*cos(2*$to_rad*$rTun_ha/6)}  {expr  $rTun_ttr*sin(2*$to_rad*$rTun_ha/6)}  0 ) endpoint
+point rt3  ( {expr  $rTun_ttr*cos(3*$to_rad*$rTun_ha/6)}  {expr  $rTun_ttr*sin(3*$to_rad*$rTun_ha/6)}  0 ) endpoint
+point rt4  ( {expr  $rTun_ttr*cos(4*$to_rad*$rTun_ha/6)}  {expr  $rTun_ttr*sin(4*$to_rad*$rTun_ha/6)}  0 ) endpoint
+point rt5  ( {expr  $rTun_ttr*cos(5*$to_rad*$rTun_ha/6)}  {expr  $rTun_ttr*sin(5*$to_rad*$rTun_ha/6)}  0 ) endpoint
+point rt6  ( {expr  $rTun_ttr*cos(6*$to_rad*$rTun_ha/6)}  {expr  $rTun_ttr*sin(6*$to_rad*$rTun_ha/6)}  0 ) endpoint
+point rt7  ( {expr  $rTun_ttr*cos(7*$to_rad*$rTun_ha/6)}  {expr  $rTun_ttr*sin(7*$to_rad*$rTun_ha/6)}  0 ) endpoint
+
+point rt1_ ( {expr  $rTun_ttr*cos(  $to_rad*$rTun_ha/6)}  {expr -$rTun_ttr*sin(  $to_rad*$rTun_ha/6)}  0 ) endpoint
+point rt2_ ( {expr  $rTun_ttr*cos(2*$to_rad*$rTun_ha/6)}  {expr -$rTun_ttr*sin(2*$to_rad*$rTun_ha/6)}  0 ) endpoint
+point rt3_ ( {expr  $rTun_ttr*cos(3*$to_rad*$rTun_ha/6)}  {expr -$rTun_ttr*sin(3*$to_rad*$rTun_ha/6)}  0 ) endpoint
+point rt4_ ( {expr  $rTun_ttr*cos(4*$to_rad*$rTun_ha/6)}  {expr -$rTun_ttr*sin(4*$to_rad*$rTun_ha/6)}  0 ) endpoint
+point rt5_ ( {expr  $rTun_ttr*cos(5*$to_rad*$rTun_ha/6)}  {expr -$rTun_ttr*sin(5*$to_rad*$rTun_ha/6)}  0 ) endpoint
+point rt6_ ( {expr  $rTun_ttr*cos(6*$to_rad*$rTun_ha/6)}  {expr -$rTun_ttr*sin(6*$to_rad*$rTun_ha/6)}  0 ) endpoint
+point rt7_ ( {expr  $rTun_ttr*cos(7*$to_rad*$rTun_ha/6)}  {expr -$rTun_ttr*sin(7*$to_rad*$rTun_ha/6)}  0 ) endpoint
+
+polyline rtunCtrl  pointlist (  rt6_ rt5_ rt4_ rt3_ rt2_ rt1_ rt0 rt1 rt2 rt3 rt4 rt5 rt6  )  endpolyline     ## C-shaped cross section 
+
+bsplinecurve rTunSpline
+  order 4   ## =cubic
+  controlpointlist ( rt7_ rt6_ rt5_ rt4_ rt3_ rt2_ rt1_ rt0 rt1 rt2 rt3 rt4 rt5 rt6 rt7 )  
+  slices {expr $rTun_xSectSlices}
+  drawcontrols {expr $rTun_drawControls}
+endbsplinecurve
+
+crosssection rTunXsect    type bsplinecurve rTunSpline   endcrosssection
+
+
+sweep  rTun
+  path  rTunSweep
+    minimizetorsion  {expr $rTun_minTorsion}
+    azimuth  {expr $rTun_tazim}
+    twist    {expr $rTun_twist}
+  endpath
+  crosssection rTunXsect  endcrosssection  
+  drawpath {expr $rTun_drawPath}
+  drawsweep {expr $rTun_drawSweep}
+#  solid SLF_HOLLOW
+endsweep
+
+
+
+#######################  TUNNEL "sTun"  == another partial circular tunnel ring    ########################
+
+tclinit {
+  
+  proc Create_sTunUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+	set root .$subname
+    } elseif { $parent == "." } {
+	set root .$subname
+    } else {
+	set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set ttr    [CreateScale $name $root  ttr    "tun. mid-radius"    3.4    1.0   9.0  0.1    1 horizontal]
+    set tti    [CreateScale $name $root  tti    "tun.in  r-scale"    1.2    0.5   2.0  0.1    1 horizontal]
+    set ttm    [CreateScale $name $root  ttm    "tun.mid r-scale"    1.0    0.5   2.0  0.1    1 horizontal]
+    set tte    [CreateScale $name $root  tte    "tun.end r-scale"    1.2    0.5   2.0  0.1    1 horizontal]
+    set ttl    [CreateScale $name $root  ttl    "tunnel length"      1.2    0.1   4    0.1    1 horizontal]
+    set ha     [CreateScale $name $root  ha     "C-half-angle"     145.0    1   180    1      1 horizontal]
+
+    set a     [CreateScale $name $root  a       "tunnel-alpha"      90.0  -180   180    1      1 horizontal]
+    set t     [CreateScale $name $root  t       "tunnel-theta"     -40.0  -120   120    1      1 horizontal]
+    set p     [CreateScale $name $root  p       "tunnel-phi"       -90.0  -180   180    1      1 horizontal]
+    set x     [CreateScale $name $root  x       "tunnel x-pos"       0.0    -4     4    0.1    1 horizontal]
+    set y     [CreateScale $name $root  y       "tunnel y-pos"       4.0    -4     8    0.1    1 horizontal]
+    set z     [CreateScale $name $root  z       "tunnel z-pos"      -2.8    -6     0    0.1    1 horizontal]
+
+    set xSectSlices  [CreateScale $name $root  xSectSlices   "xSectSlices"      6    6   60    2    1 horizontal]
+    set minTorsion   [CreateScale $name $root  minTorsion    "minTorsion"       0    0    1    1    1 horizontal]
+    set tazim        [CreateScale $name $root  tazim         "tunnel-azimuth"  90  -90   90    1    1 horizontal]
+    set twist        [CreateScale $name $root  twist         "twist"            0  -90   90    1    1 horizontal]
+    set drawSweep    [CreateScale $name $root  drawSweep     "drawSweep"        1    0    1    1    1 horizontal]
+    set drawControls [CreateScale $name $root  drawControls  "drawControls"     0    0    1    1    1 horizontal]	
+    set drawPath     [CreateScale $name $root  drawPath      "drawPath"         1    0    1    1    1 horizontal]
+  
+    pack   $ttr $tti $ttm $tte  $ttl  $ha    $a  $t $p   $x  $y  $z  $xSectSlices   $tazim  $twist   $drawSweep      -side top -fill x
+  }
+  Create_sTunUI $winName sTun
+}
+
+####  TUNNEL SWEEP-PATH  for center of circular arc  ###################
+
+point  sti ( 0  0  {expr -$sTun_ttl} ) endpoint
+point  stm ( 0  0  0) endpoint
+point  ste ( 0  0  {expr  $sTun_ttl} ) endpoint
+
+controlpoint  csti   point rti   scale ({expr $sTun_tti} {expr $sTun_tti} {expr $sTun_tti})    endcontrolpoint
+controlpoint  cstm   point rtm   scale ({expr $sTun_ttm} {expr $sTun_ttm} {expr $sTun_ttm})    endcontrolpoint
+controlpoint  cste   point rte   scale ({expr $sTun_tte} {expr $sTun_tte} {expr $sTun_tte})    endcontrolpoint
+## this allows to make tapered tunnels ##
+
+polyline sTunSweep  pointlist ( crti crtm crte ) endpolyline
+
+
+###  C-shaped cross section, approximated by B-spline  ###############
+
+point st0  ( {expr  $sTun_ttr}  0  0 ) endpoint
+point st1  ( {expr  $sTun_ttr*cos(  $to_rad*$sTun_ha/6)}  {expr  $sTun_ttr*sin(  $to_rad*$sTun_ha/6)}  0 ) endpoint
+point st2  ( {expr  $sTun_ttr*cos(2*$to_rad*$sTun_ha/6)}  {expr  $sTun_ttr*sin(2*$to_rad*$sTun_ha/6)}  0 ) endpoint
+point st3  ( {expr  $sTun_ttr*cos(3*$to_rad*$sTun_ha/6)}  {expr  $sTun_ttr*sin(3*$to_rad*$sTun_ha/6)}  0 ) endpoint
+point st4  ( {expr  $sTun_ttr*cos(4*$to_rad*$sTun_ha/6)}  {expr  $sTun_ttr*sin(4*$to_rad*$sTun_ha/6)}  0 ) endpoint
+point st5  ( {expr  $sTun_ttr*cos(5*$to_rad*$sTun_ha/6)}  {expr  $sTun_ttr*sin(5*$to_rad*$sTun_ha/6)}  0 ) endpoint
+point st6  ( {expr  $sTun_ttr*cos(6*$to_rad*$sTun_ha/6)}  {expr  $sTun_ttr*sin(6*$to_rad*$sTun_ha/6)}  0 ) endpoint
+point st7  ( {expr  $sTun_ttr*cos(7*$to_rad*$sTun_ha/6)}  {expr  $sTun_ttr*sin(7*$to_rad*$sTun_ha/6)}  0 ) endpoint
+
+point st1_ ( {expr  $sTun_ttr*cos(  $to_rad*$sTun_ha/6)}  {expr -$sTun_ttr*sin(  $to_rad*$sTun_ha/6)}  0 ) endpoint
+point st2_ ( {expr  $sTun_ttr*cos(2*$to_rad*$sTun_ha/6)}  {expr -$sTun_ttr*sin(2*$to_rad*$sTun_ha/6)}  0 ) endpoint
+point st3_ ( {expr  $sTun_ttr*cos(3*$to_rad*$sTun_ha/6)}  {expr -$sTun_ttr*sin(3*$to_rad*$sTun_ha/6)}  0 ) endpoint
+point st4_ ( {expr  $sTun_ttr*cos(4*$to_rad*$sTun_ha/6)}  {expr -$sTun_ttr*sin(4*$to_rad*$sTun_ha/6)}  0 ) endpoint
+point st5_ ( {expr  $sTun_ttr*cos(5*$to_rad*$sTun_ha/6)}  {expr -$sTun_ttr*sin(5*$to_rad*$sTun_ha/6)}  0 ) endpoint
+point st6_ ( {expr  $sTun_ttr*cos(6*$to_rad*$sTun_ha/6)}  {expr -$sTun_ttr*sin(6*$to_rad*$sTun_ha/6)}  0 ) endpoint
+point st7_ ( {expr  $sTun_ttr*cos(7*$to_rad*$sTun_ha/6)}  {expr -$sTun_ttr*sin(7*$to_rad*$sTun_ha/6)}  0 ) endpoint
+
+polyline sTunCtrl  pointlist (  st6_ st5_ st4_ st3_ st2_ st1_ st0 st1 st2 st3 st4 st5 st6  )  endpolyline     ## C-shaped cross section 
+
+bsplinecurve sTunSpline
+  order 4   ## =cubic
+  controlpointlist ( st7_ st6_ st5_ st4_ st3_ st2_ st1_ st0 st1 st2 st3 st4 st5 st6 st7 )  
+  slices {expr $sTun_xSectSlices}
+  drawcontrols {expr $sTun_drawControls}
+endbsplinecurve
+
+crosssection sTunXsect    type bsplinecurve sTunSpline   endcrosssection
+
+
+sweep  sTun
+  path  sTunSweep
+    minimizetorsion  {expr $sTun_minTorsion}
+    azimuth  {expr $sTun_tazim}
+    twist    {expr $sTun_twist}
+  endpath
+  crosssection sTunXsect  endcrosssection  
+  drawpath {expr $sTun_drawPath}
+  drawsweep {expr $sTun_drawSweep}
+#  solid SLF_HOLLOW
+endsweep
+
+
+
+##########+++++++++++#############++++++++++++##############++++++++++++++++###############+++++++++++++++++#############+++++++++++++#########
+
+
+##########   Putting it all together  #####################
+
+group assembly
+  instance coord_axes   scale( 13 13 13 )  endinstance
+#  instance cube   surface  K  scale(6 6 6)   endinstance          ## avoid producing unnecessary .SIF output
+
+  instance aRim  surface  TEXrim   endinstance   
+  instance fFun  surface  TEXrim  rotate(0 0 1)({expr $fFun_a})  rotate(0 1 0)({expr $fFun_t})  rotate(0 0 1)({expr $fFun_p})  
+                                  translate({expr $fFun_x} {expr $fFun_y} {expr $fFun_z}) endinstance
+
+  instance tTun  surface  TEXtun  rotate(0 0 1)({expr $tTun_a})  rotate(0 1 0)({expr $tTun_t})  rotate(0 0 1)({expr $tTun_p})  
+                                  translate({expr $tTun_x} {expr $tTun_y} {expr $tTun_z}) endinstance
+
+  instance rTun  surface  TEXtun  rotate(0 0 1)({expr $rTun_a})  rotate(0 1 0)({expr $rTun_t})  rotate(0 0 1)({expr $rTun_p})  
+                                  translate({expr $rTun_x} {expr $rTun_y} {expr $rTun_z}) endinstance
+
+  instance sTun  surface  TEXtun  rotate(0 0 1)({expr $sTun_a})  rotate(0 1 0)({expr $sTun_t})  rotate(0 0 1)({expr $sTun_p})  
+                                  translate({expr $sTun_x} {expr $sTun_y} {expr $sTun_z}) endinstance
+
+endgroup
+
+
+#########  Some surface colors  ################################
+
+surface R color (1 0 0) endsurface     # Red
+surface O color (0.9 0.6 0) endsurface # Orange
+surface Y color (1 1 0) endsurface     # Yellow
+surface L color (0.6 0.8 0) endsurface # Lime
+surface G color (0 0.9 0) endsurface   # Green
+surface A color (0 0.9 0.7) endsurface # Aqua
+surface C color (0 1 1) endsurface     # Cyan
+surface U color (0 0.5 1) endsurface   # Uniform
+surface B color (0 0 1) endsurface     # Blue
+surface P color (0.6 0 1) endsurface   # Purple
+surface M color (1 0 1) endsurface     # Magenta
+surface Z color (1 0 0.5) endsurface   # Zinnober
+
+surface K color (0 0 0) endsurface     # blacK
+surface W color (1 1 1) endsurface     # White
+  
+surface TEXrim bitmap  "tex_rims.gif"    SLF_TEXMAP endsurface
+surface TEXtun bitmap  "tex_tunnel.gif"  SLF_TEXMAP endsurface
+
+################################################################
+# A generic setup for viewing SLF objects
+##########################################
+
+group world
+  lod {expr $gRoot_lod}
+  shading {expr $gRoot_shading}
+
+  instance  assembly   
+#    scale( 0.015 0.015 0.015 )  rotate(1 0 0)(-10)  ## for screen view
+  endinstance     
+
+  instance amb
+    id main_amb
+  endinstance
+  instance sun
+    id front_sun
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+  instance anti_sun
+    id back_sun
+    rotate (1 0 0) (180)
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+endgroup
+
+
+light amb
+  type SLF_AMBIENT
+  color (0.8 0.8 0.8)
+endlight
+
+light sun
+  type SLF_DIRECTIONAL
+  color (0.9 0.9 0.9)
+endlight
+
+light anti_sun
+  type SLF_DIRECTIONAL
+  color (0.6 0.6 0.6)
+endlight
+
+
+camera cam   
+## choose one or the other mode:
+
+#  projection SLF_PARALLEL
+#  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 2.0)
+
+  projection SLF_PERSPECTIVE
+  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 -0.01)
+endcamera
+
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0.0 0.0 1 )
+  endinstance
+endgroup
+
+window Window
+  background (0.7 0.7 0.7)
+endwindow
+
+viewport vp Window
+endviewport
+
+render vp gCam.iCam.cam world 
+  light world.front_sun.sun
+  light world.back_sun.anti_sun
+  light world.main_amb.amb
+endrender
+
+########################################
+
+
