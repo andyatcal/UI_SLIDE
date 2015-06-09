@@ -27,3 +27,15 @@ The first slider: "width saddle ribbon" should properly affect the width of the 
 There the connection between the 2nd-last B-spline points should be the same for the branches that are supposed to fuse there.
 
 look at the pictures in my Bridges paper again.
+
+ME:
+
+I got it wrong on the points of the left and right branches, need to rebuild the front and back.
+
+June 9th 2015
+
+New problem occur: the six parts still do not connect.
+
+Plan:
+
+I can switch the front and back and get them connected? Let me just have a try then.

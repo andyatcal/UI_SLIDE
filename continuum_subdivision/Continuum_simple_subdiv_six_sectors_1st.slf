@@ -281,9 +281,46 @@ face b9 (p0 p1 q1 q0 )   endface
 object fsurf (f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 )   endobject
 object bsurf (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 )   endobject
 
-#########################################################################################
+############### The second part ###################################
 
-################ SUBDIVISION PARTS#######################################################
+### Front
+face ff0 (q6 q5 s_3 s_4 )   endface
+face ff1 (q5 q4 s_2 s_3 )   endface
+face ff2 (q4 q3 s_1 s_2 )   endface 
+
+face ff3 (p5 p6 s4 s3 )   endface 
+face ff4 (p4 p5 s3 s2 )   endface 
+face ff5 (p3 p4 s2 s1 )   endface 
+
+face ff6 (q3 p3 s1 s_1 )   endface 
+
+face ff7 (p2 p3 q3 q2 )   endface 
+face ff8 (p1 p2 q2 q1 )   endface 
+
+face ff9 (p0 p1 q1 q0 )   endface
+
+### Back
+face bb0 (q5 q6 s_4 s_3 )   endface
+face bb1 (q4 q5 s_3 s_2 )   endface
+face bb2 (q3 q4 s_2 s_1 )   endface 
+
+face bb3 (p6 p5 s3 s4 )   endface 
+face bb4 (p5 p4 s2 s3 )   endface 
+face bb5 (p4 p3 s1 s2 )   endface 
+
+face bb6 (p3 q3 s_1 s1 )   endface 
+
+face bb7 (p3 p2 q2 q3 )   endface 
+face bb8 (p2 p1 q1 q2 )   endface 
+
+face bb9 (p1 p0 q0 q1 )   endface 
+
+
+object ffsurf (ff0 ff1 ff2 ff3 ff4 ff5 ff6 ff7 ff8 ff9 )   endobject
+object bbsurf (bb0 bb1 bb2 bb3 bb4 bb5 bb6 bb7 bb8 bb9 )   endobject
+
+#########################################################################################
+################ SUBDIVISION FIRST PARTS#######################################################
 subdivision fSDsurf
 
   lod {expr $oSubdivision(lod)}
@@ -340,7 +377,63 @@ subdivision bSDsurf
 
 endsubdivision
 
+################ SUBDIVISION SECOND PARTS#######################################################
+subdivision ffSDsurf
+
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)}
+  errormetric {expr $oSubdivision(errormetric)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawcurrent {expr $oSubdivision(drawcurrent)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+  vknots {expr $oSubdivision(a)}
+  vorder {expr $oSubdivision(b)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+  instance ffsurf    endinstance
+
+endsubdivision
+
 #######################################################
+
+subdivision bbSDsurf
+
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)}
+  errormetric {expr $oSubdivision(errormetric)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawcurrent {expr $oSubdivision(drawcurrent)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+  vknots {expr $oSubdivision(a)}
+  vorder {expr $oSubdivision(b)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+  instance bbsurf    endinstance
+
+endsubdivision
+
 #######################################################
 
 offset oOffset
@@ -380,16 +473,20 @@ group assembly
   instance wedge surface   R   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
 *)
   instance fSDsurf surface   L   endinstance
+  instance bSDsurf surface   A   endinstance
+  instance ffSDsurf surface   L   rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
+  instance bbSDsurf surface   A   rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
+  instance ffSDsurf surface   L   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
+  instance bbSDsurf surface   A   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
 
-  instance fSDsurf surface   G   rotate(0 1 0)(180)  endinstance
-
+(*
   instance fSDsurf surface   L   rotate(0 0 1)(120)  endinstance
   instance fSDsurf surface   L   rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
 
   instance fSDsurf surface   L   rotate(0 0 1)(-120)  endinstance
   instance fSDsurf surface   L   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
 
-  instance bSDsurf surface   A   endinstance
+
 
   instance bSDsurf surface   A   rotate(0 1 0)(180)  endinstance
 
@@ -400,7 +497,7 @@ group assembly
   instance bSDsurf surface   A   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
 
 #  instance oOffset surface  O   endinstance
-
+*)
 endgroup
 
 
