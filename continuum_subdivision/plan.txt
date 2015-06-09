@@ -1,4 +1,8 @@
-PLAN: Mimick Perry_Tetra4_offset.slf to get the subdivision of continuum.
+PLAN: 
+
+June 8th 2015
+
+Mimick Perry_Tetra4_offset.slf to get the subdivision of continuum.
 
 1. READ Perry_Tetra4_offset.slf and find how does it work.
 
@@ -10,3 +14,16 @@ PLAN: Mimick Perry_Tetra4_offset.slf to get the subdivision of continuum.
 2.4 Does it have the mobius issue?
 
 3. Send a screenshot to Prof. CHS
+
+Feedback from Prof.CHS June 8th 2015
+
+Problems;
+1) After rotation, the six parts are NOT connected. I wonder if we should make some quads connects those parts together.
+2) Doesn't quite  look like Continuum... The width of the band/ribbons is two large. A decrease of "outer radius" make it look a bit better.
+
+>>> The problem is that you connected the rims in the wrong way. You should stay within the same color of the 3 rim segments in the same sector.
+There is a single branch coming from the center, which then splits outwards into two branches that connect to the neighboring sectors.
+The first slider: "width saddle ribbon" should properly affect the width of the ribbon (in direct proportion).
+There the connection between the 2nd-last B-spline points should be the same for the branches that are supposed to fuse there.
+
+look at the pictures in my Bridges paper again.
