@@ -38,4 +38,25 @@ New problem occur: the six parts still do not connect.
 
 Plan:
 
-I can switch the front and back and get them connected? Let me just have a try then.
+1st: ADD extra quads from bspline;
+2nd: ADD dummy quads from bspline;
+
+Feedback from Prof. CHS:
+
+>>>  You need to combine the quadmeshes of the sectors BEFORE doing the subdivision, or the edges will already have been rounded and shrunk.
+>>>  fixed example:   "Continuum_subdiv_six_sectors__combined.slf"
+
+>>>  This works for the outer segment connections.
+
+>>> In the center, the ribbons don't fuse, because they really do not come together.
+>>> If you look at Perry's sculpture, you can see that there is a "Monkey-saddle" there.
+>>> To make properly connected polyhedral saddle, we must add a horizontal hexagon.
+>>> Then we run into the reversed-side problem.
+>>> To fix that we use the back-surfaces for the lower half of the sculpture.
+>>> So now the saddle works, -- but there is trouble at the outer segment connections!  :-(
+>>> See:  "Continuum_subdiv_six_sectors__saddle.slf"
+
+>>> To get to a solution for both problems, we judiciously combine front and back surfaces,
+>>> so we get a properly connected double coverage everywhere; -- a nice challenge.
+
+
