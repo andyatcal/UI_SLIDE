@@ -182,6 +182,23 @@ point s4  ( {expr $f_orad*cos($to_rad*(30+$f_dphi))} {expr $f_orad*sin($to_rad*(
 point s5  ( {expr $f_orad*cos($to_rad*(30+$f_dphi))} {expr $f_orad*sin($to_rad*(30+$f_dphi))}  {expr -$f_zseg} ) endpoint
 
 
+## hexagonal central saddle face:
+
+#point p0  ( {expr 0.866*$f_wsr} {expr 0.5*$f_wsr}  0 )  endpoint
+#point q0  ( {expr 0.866*$f_wsr} {expr -0.5*$f_wsr}  0 )  endpoint
+
+point h0  ( 0 {expr $f_wsr}   0 )  endpoint
+point h1  ( {expr -0.866*$f_wsr} {expr 0.5*$f_wsr}  0 )  endpoint
+point h2  ( {expr -0.866*$f_wsr} {expr -0.5*$f_wsr}  0 )  endpoint
+point h3  ( 0 {expr -$f_wsr}   0 )  endpoint
+
+face hex (q0 p0 h0 h1 h2 h3) endface
+
+object saddleface (hex)  endobject
+
+
+## rim curves:
+
 bsplinecurve rightRim
   order 4   ## =cubic
   controlpointlist ( p_ p0 p1 p2 p3 p4 p5 p6 p7 )  
@@ -261,6 +278,8 @@ face f7 (p3 p2 q2 q3 )   endface
 face f8 (p2 p1 q1 q2 )   endface 
 
 face f9 (p1 p0 q0 q1 )   endface 
+face f10 (q6 q6 s_4 s_4)   endface
+face f11 (p6 p6 s4 s4)   endface
 
 ### Back
 face b0 (q6 q5 s_3 s_4 )   endface
@@ -277,9 +296,11 @@ face b7 (p2 p3 q3 q2 )   endface
 face b8 (p1 p2 q2 q1 )   endface 
 
 face b9 (p0 p1 q1 q0 )   endface
+face b10 (q6 q6 s_4 s_4)   endface
+face b11 (p6 p6 s4 s4)   endface
 
-object fsurf (f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 )   endobject
-object bsurf (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 )   endobject
+object fsurf (f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11)   endobject
+object bsurf (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11)   endobject
 
 #########################################################################################
 
@@ -308,13 +329,15 @@ subdivision fSDsurf
   facetsmax {expr $oSubdivision(facetsmax)}
 
   instance fsurf    endinstance
-  instance fsurf  rotate(0 1 0)(180)  endinstance
+  instance bsurf  rotate(0 1 0)(180)  endinstance
 
   instance fsurf  rotate(0 0 1)(120)  endinstance
-  instance fsurf  rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
+  instance bsurf  rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
 
   instance fsurf  rotate(0 0 1)(-120)  endinstance
-  instance fsurf  rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
+  instance bsurf  rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
+
+  instance saddleface   endinstance
 
 endsubdivision
 
@@ -344,13 +367,14 @@ subdivision bSDsurf
   facetsmax {expr $oSubdivision(facetsmax)}
 
   instance bsurf    endinstance
-  instance bsurf  rotate(0 1 0)(180)  endinstance
+  instance fsurf  rotate(0 1 0)(180)  endinstance
 
   instance bsurf  rotate(0 0 1)(120)  endinstance
-  instance bsurf  rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
+  instance fsurf  rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
 
   instance bsurf  rotate(0 0 1)(-120)  endinstance
-  instance bsurf  rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
+  instance fsurf  rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
+  instance saddleface rotate(0 1 0)(180)  endinstance
 endsubdivision
 
 #######################################################
@@ -367,7 +391,6 @@ offset oOffset
   drawcontrols {expr $oOffset(drawcontrols)}
 
   instance  fSDsurf     endinstance
-
 endoffset
 
 #######################################################
@@ -395,7 +418,7 @@ group assembly
 *)
   instance fSDsurf surface   L   endinstance              ## <<< THE COMBINED FRONT-SD SURFACE ##
 
- (*
+(*
   instance bSDsurf surface   A   endinstance
 
   instance bSDsurf surface   A   rotate(0 1 0)(180)  endinstance

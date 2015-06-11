@@ -241,7 +241,19 @@ sweep  segmTube
   solid SLF_HOLLOW
 endsweep
 
+## hexagonal central saddle face:
 
+#point p0  ( {expr 0.866*$f_wsr} {expr 0.5*$f_wsr}  0 )  endpoint
+#point q0  ( {expr 0.866*$f_wsr} {expr -0.5*$f_wsr}  0 )  endpoint
+
+point h0  ( 0 {expr $f_wsr}   0 )  endpoint
+point h1  ( {expr -0.866*$f_wsr} {expr 0.5*$f_wsr}  0 )  endpoint
+point h2  ( {expr -0.866*$f_wsr} {expr -0.5*$f_wsr}  0 )  endpoint
+point h3  ( 0 {expr -$f_wsr}   0 )  endpoint
+
+face hex (q0 p0 h0 h1 h2 h3) endface
+
+object saddleface (hex)  endobject
 ###########################################################################
 
 ####  putinng in the control polyhedron for the connecting surface #####################
@@ -316,6 +328,8 @@ subdivision fSDsurf
   instance fsurf  rotate(0 0 1)(-120)  endinstance
   instance fsurf  rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
 
+  instance saddleface   endinstance
+  instance saddleface rotate(0 1 0)(180)  endinstance
 endsubdivision
 
 #######################################################
@@ -351,6 +365,9 @@ subdivision bSDsurf
 
   instance bsurf  rotate(0 0 1)(-120)  endinstance
   instance bsurf  rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
+  instance saddleface   endinstance
+  instance saddleface rotate(1 0 0)(180)  endinstance
+
 endsubdivision
 
 #######################################################
@@ -394,10 +411,8 @@ group assembly
   instance wedge surface   R   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
 *)
   instance fSDsurf surface   L   endinstance              ## <<< THE COMBINED FRONT-SD SURFACE ##
-
- (*
   instance bSDsurf surface   A   endinstance
-
+(*
   instance bSDsurf surface   A   rotate(0 1 0)(180)  endinstance
 
   instance bSDsurf surface   A   rotate(0 0 1)(120)  endinstance

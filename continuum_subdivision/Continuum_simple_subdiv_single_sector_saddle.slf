@@ -19,7 +19,7 @@
 tclinit {
 
   package require slideui
-  
+
   toplevel .slfWindow.ui
   CreateSLIDESubdivisionObject oSubdivision
   set widget [CreateSLIDESubdivisionUI .slfWindow.ui oSubdivision]
@@ -102,7 +102,7 @@ tclinit {
 
     toplevel $root
 
-    set wsr    [CreateScale $name $root  wsr    "width saddle ribbon"   0.2    0.05    0.5   0.01   1 horizontal]
+    set wsr    [CreateScale $name $root  wsr    "width saddle ribbon"   0.3    0.2     2     0.1    1 horizontal]
     set srad   [CreateScale $name $root  srad   "mean sculpt radius"    2.4    1.0     5     0.1    1 horizontal]
     set shgt   [CreateScale $name $root  shgt   "mean sculpt height"    2.5    0.2     4     0.1    1 horizontal]
     set dy     [CreateScale $name $root  dy     "dy extent"             0.25   0.0     1     0.01   1 horizontal]
@@ -260,7 +260,8 @@ face f6 (p3 q3 s_1 s1 )   endface
 face f7 (p3 p2 q2 q3 )   endface 
 face f8 (p2 p1 q1 q2 )   endface 
 
-face f9 (p1 p0 q0 q1 )   endface 
+face f9 (p1 p0 q0 q1 )   endface
+face f10 (p0 q0 ooo ooo) endface
 
 ### Back
 face b0 (q6 q5 s_3 s_4 )   endface
@@ -278,7 +279,7 @@ face b8 (p1 p2 q2 q1 )   endface
 
 face b9 (p0 p1 q1 q0 )   endface
 
-object fsurf (f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 )   endobject
+object fsurf (f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10)   endobject
 object bsurf (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 )   endobject
 
 #########################################################################################
@@ -308,13 +309,6 @@ subdivision fSDsurf
   facetsmax {expr $oSubdivision(facetsmax)}
 
   instance fsurf    endinstance
-  instance fsurf  rotate(0 1 0)(180)  endinstance
-
-  instance fsurf  rotate(0 0 1)(120)  endinstance
-  instance fsurf  rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
-
-  instance fsurf  rotate(0 0 1)(-120)  endinstance
-  instance fsurf  rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
 
 endsubdivision
 
@@ -344,13 +338,7 @@ subdivision bSDsurf
   facetsmax {expr $oSubdivision(facetsmax)}
 
   instance bsurf    endinstance
-  instance bsurf  rotate(0 1 0)(180)  endinstance
 
-  instance bsurf  rotate(0 0 1)(120)  endinstance
-  instance bsurf  rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
-
-  instance bsurf  rotate(0 0 1)(-120)  endinstance
-  instance bsurf  rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
 endsubdivision
 
 #######################################################
@@ -367,7 +355,6 @@ offset oOffset
   drawcontrols {expr $oOffset(drawcontrols)}
 
   instance  fSDsurf     endinstance
-
 endoffset
 
 #######################################################
@@ -393,11 +380,18 @@ group assembly
   instance wedge surface   M   rotate(0 0 1)(-120)  endinstance
   instance wedge surface   R   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
 *)
-  instance fSDsurf surface   L   endinstance              ## <<< THE COMBINED FRONT-SD SURFACE ##
+  instance fSDsurf surface   L   endinstance
+(*
+  instance fSDsurf surface   L   rotate(0 1 0)(180)  endinstance
 
- (*
+  instance fSDsurf surface   L   rotate(0 0 1)(120)  endinstance
+  instance fSDsurf surface   L   rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
+
+  instance fSDsurf surface   L   rotate(0 0 1)(-120)  endinstance
+  instance fSDsurf surface   L   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
+*)
   instance bSDsurf surface   A   endinstance
-
+(*
   instance bSDsurf surface   A   rotate(0 1 0)(180)  endinstance
 
   instance bSDsurf surface   A   rotate(0 0 1)(120)  endinstance
@@ -406,7 +400,6 @@ group assembly
   instance bSDsurf surface   A   rotate(0 0 1)(-120)  endinstance
   instance bSDsurf surface   A   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
 *)
-
 #  instance oOffset surface  O   endinstance
 
 endgroup
@@ -439,7 +432,7 @@ group world
   lod {expr $gRoot_lod}
   shading {expr $gRoot_shading}
 
-  instance  assembly   scale( 0.03 0.03 0.03 )   rotate(0 0 1)(-90)  endinstance     
+  instance  assembly   scale( 0.01 0.01 0.01 )   rotate(0 0 1)(-90)  endinstance     
 
   instance amb
     id main_amb
