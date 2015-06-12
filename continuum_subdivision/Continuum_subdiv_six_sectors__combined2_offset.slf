@@ -1,0 +1,526 @@
+### Continuum_simple_subdiv.slf
+#   A program to create surface sculptures in the style of Perry's CONTINUUM sculpture.
+#   Approach: a unique section of the rims of this sculpture into absolute design space.
+#   Replicate according to the 12-fold D3d-symmetry of this sculpture.
+#   Add connecting branches between those 1D-manifolds to make a crude polyhedral approximation
+#   of the desired surface topology. Then use subdivision to smooth that surface.
+
+#   First try at entering the rim in 3 segments in one 60(?)-degree wedge around the z axis.
+
+##  ALL the basic constructs are parametrized control polygons. 
+
+
+### AW 2015/06/08
+
+###################################################
+
+## general setup for subdivision and offset.
+
+tclinit {
+
+  package require slideui
+  
+  toplevel .slfWindow.ui
+  CreateSLIDESubdivisionObject oSubdivision
+  set widget [CreateSLIDESubdivisionUI .slfWindow.ui oSubdivision]
+  pack $widget
+
+  toplevel .slfWindow.uiOffset
+  CreateSLIDEOffsetObject oOffset
+  set widget [CreateSLIDEOffsetUI .slfWindow.uiOffset oOffset]
+  pack $widget
+}
+
+
+## general links and definitions:
+
+tclinit {
+  set winName .slfWindow
+
+  source SLIDEUI.tcl
+  source MATH.tcl
+
+  set to_rad [expr $SLF_PI/180.0 ]
+  CreateGroupUI $winName gRoot
+}
+
+
+#####  Some elementary geometry   #################
+
+## Coordinate axes:
+point ooo  ( 0 0 0 ) endpoint
+point xoo  ( 1 0 0 ) endpoint
+point oyo  ( 0 1 0 ) endpoint
+point ooz  ( 0 0 1 ) endpoint
+
+polyline xaxis pointlist (ooo xoo) endpolyline
+polyline yaxis pointlist (ooo oyo) endpolyline
+polyline zaxis pointlist (ooo ooz) endpolyline
+
+group coord_axes
+  instance xaxis surface R endinstance
+  instance yaxis surface B endinstance
+  instance zaxis surface G endinstance
+endgroup
+
+###################################################
+
+# a reference cube -- 
+point XYZ  ( 1  1  1 ) endpoint
+point XYC  ( 1  1  -1 ) endpoint
+point XBZ  ( 1  -1  1 ) endpoint
+point XBC  ( 1  -1  -1 ) endpoint
+point AYZ  ( -1  1  1 ) endpoint
+point AYC  ( -1  1  -1 ) endpoint
+point ABZ  ( -1  -1  1 ) endpoint
+point ABC  ( -1  -1  -1 ) endpoint
+
+face c1   (XYZ XBZ XBC XYC ) endface
+face c2   (XYZ XYC AYC AYZ ) endface
+face c3   (AYZ AYC ABC ABZ ) endface
+face c4   (ABZ ABC XBC XBZ ) endface
+face c5   (XYZ AYZ ABZ XBZ ) endface
+face c6   (XYC XBC ABC AYC ) endface
+
+object cube (c1 c2 c3 c4 c5 c6)    solid SLF_HOLLOW   shading SLF_WIRE   endobject
+
+
+#######################  Definition of the geometry of the RIM of Perry's "Continuum"  ##########################
+
+tclinit {
+  
+  proc CreateFunUI { parent name } {
+    set subname "slf_[subst $name]"
+
+    if { $parent == {} } {
+  set root .$subname
+    } elseif { $parent == "." } {
+  set root .$subname
+    } else {
+  set root $parent.$subname
+    }
+
+    toplevel $root
+
+    set wsr    [CreateScale $name $root  wsr    "width saddle ribbon"   0.2    0.05    0.5   0.01   1 horizontal]
+    set srad   [CreateScale $name $root  srad   "mean sculpt radius"    2.4    1.0     5     0.1    1 horizontal]
+    set shgt   [CreateScale $name $root  shgt   "mean sculpt height"    2.5    0.2     4     0.1    1 horizontal]
+    set dy     [CreateScale $name $root  dy     "dy extent"             0.25   0.0     1     0.01   1 horizontal]
+    set ox     [CreateScale $name $root  ox     "outer x coord"         3.0    0.2     6     0.1    1 horizontal]
+    set oy     [CreateScale $name $root  oy     "outer y coord"         1.0    0.2     6     0.1    1 horizontal]
+    set orad   [CreateScale $name $root  orad   "outer radius"          3.0    0.2     6     0.1    1 horizontal]
+    set dphi   [CreateScale $name $root  dphi   "delta-phi"             5    -10      10     0.5    1 horizontal]
+    set xseg   [CreateScale $name $root  xseg   "segm x coord"          1.5    1.0     3     0.1    1 horizontal]
+    set yseg   [CreateScale $name $root  yseg   "segm y coord"          0.8    0.2     6     0.1    1 horizontal]
+    set zseg   [CreateScale $name $root  zseg   "segm z heigt"          0.25   0.0     0.4   0.01   1 horizontal]
+    set d      [CreateScale $name $root  d      "cube diag"             1.0    0.2     2     0.1    1 horizontal]
+
+    set rimrad       [CreateScale $name $root  rimrad        "rim radius"       0.03 0.01 0.2  0.01 1 horizontal]
+    set rimgon       [CreateScale $name $root  rimgon        "rim N-gon"        8    3   12    1    1 horizontal]
+    set minTorsion   [CreateScale $name $root  minTorsion    "minTorsion"       1    0    1    1    1 horizontal]
+    set razim        [CreateScale $name $root  razim         "rim-azim"         0  -90   90    1    1 horizontal]
+    set twist        [CreateScale $name $root  twist         "rim-twist"        0  -90   90    1    1 horizontal]
+    set drawSweep    [CreateScale $name $root  drawSweep     "drawSweep"        1    0    1    1    1 horizontal]
+    set drawControls [CreateScale $name $root  drawControls  "drawControls"     1    0    1    1    1 horizontal] 
+    set drawPath     [CreateScale $name $root  drawPath      "drawPath"         1    0    1    1    1 horizontal]
+    set sweepSlices  [CreateScale $name $root  sweepSlices   "sweepSlices"     30    8   80    2    1 horizontal]
+   
+    pack  $wsr  $srad $shgt  $dy  $orad $dphi  $xseg $yseg $zseg   $rimrad $rimgon  $drawPath $sweepSlices  -side top -fill x
+  }
+
+  CreateFunUI $winName f
+}
+
+crosssection csRim
+  type circle
+  radius {expr  $f_rimrad}
+  slices {expr  $f_rimgon}
+endcrosssection
+
+#####  CONTINUUM RIM control points  ########################################################################
+
+## right saddle branch:
+
+point p_  ( {expr 0.866*$f_wsr} {expr 0.5*$f_wsr} -1 )  endpoint
+point p0  ( {expr 0.866*$f_wsr} {expr 0.5*$f_wsr}  0 )  endpoint
+point p1  ( {expr 0.866*$f_wsr} {expr 0.5*$f_wsr}  1 )  endpoint
+point p2  ( {expr 0.866*$f_wsr +0.4*$f_srad}   {expr 0.5*$f_wsr +1*$f_dy }  {expr 1.0*$f_shgt} )  endpoint
+point p3  ( {expr 0.866*$f_wsr +0.8*$f_srad} {expr 0.5*$f_wsr +2*$f_dy }  {expr 0.7*$f_shgt} )  endpoint
+point p4  ( {expr 0.866*$f_wsr +1.0*$f_srad} {expr 0.5*$f_wsr +3*$f_dy }  {expr 0.4*$f_shgt} )  endpoint
+point p5  ( {expr $f_orad*cos($to_rad*(30-$f_dphi))} {expr $f_orad*sin($to_rad*(30-$f_dphi))}  {expr $f_zseg} )  endpoint
+point p6  ( {expr $f_orad*cos($to_rad*(30-$f_dphi))} {expr $f_orad*sin($to_rad*(30-$f_dphi))}      0.0 )         endpoint
+point p7  ( {expr $f_orad*cos($to_rad*(30-$f_dphi))} {expr $f_orad*sin($to_rad*(30-$f_dphi))}  {expr -$f_zseg} ) endpoint
+
+
+## left saddle branch:
+
+point q_  ( {expr 0.866*$f_wsr} {expr -0.5*$f_wsr} -1 )  endpoint
+point q0  ( {expr 0.866*$f_wsr} {expr -0.5*$f_wsr}  0 )  endpoint
+point q1  ( {expr 0.866*$f_wsr} {expr -0.5*$f_wsr}  1 )  endpoint
+point q2  ( {expr 0.866*$f_wsr +0.4*$f_srad}   {expr -0.5*$f_wsr -1*$f_dy }  {expr 1.0*$f_shgt} )  endpoint
+point q3  ( {expr 0.866*$f_wsr +0.8*$f_srad} {expr -0.5*$f_wsr -2*$f_dy }  {expr 0.7*$f_shgt} )  endpoint
+point q4  ( {expr 0.866*$f_wsr +1.0*$f_srad} {expr -0.5*$f_wsr -3*$f_dy }  {expr 0.4*$f_shgt} )  endpoint
+point q5  ( {expr $f_orad*cos($to_rad*(30-$f_dphi))} {expr -$f_orad*sin($to_rad*(30-$f_dphi))}  {expr $f_zseg} )  endpoint
+point q6  ( {expr $f_orad*cos($to_rad*(30-$f_dphi))} {expr -$f_orad*sin($to_rad*(30-$f_dphi))}      0.0 )         endpoint
+point q7  ( {expr $f_orad*cos($to_rad*(30-$f_dphi))} {expr -$f_orad*sin($to_rad*(30-$f_dphi))}  {expr -$f_zseg} ) endpoint
+
+
+## connecting segment:
+
+point s_5 ( {expr $f_orad*cos($to_rad*(30+$f_dphi))} {expr -$f_orad*sin($to_rad*(30+$f_dphi))}  {expr -$f_zseg} ) endpoint
+point s_4 ( {expr $f_orad*cos($to_rad*(30+$f_dphi))} {expr -$f_orad*sin($to_rad*(30+$f_dphi))}      0.0 )         endpoint
+point s_3 ( {expr $f_orad*cos($to_rad*(30+$f_dphi))} {expr -$f_orad*sin($to_rad*(30+$f_dphi))}  {expr $f_zseg} )  endpoint
+
+point s_2 ( {expr 1.6*$f_xseg} {expr -2*$f_yseg}  {expr 4*$f_zseg} )  endpoint
+point s_1 ( {expr 1.2*$f_xseg} {expr   -$f_yseg}  {expr 6*$f_zseg} )  endpoint
+point s0  ( {expr 1.0*$f_xseg}      0.0           {expr 7*$f_zseg} )  endpoint
+point s1  ( {expr 1.2*$f_xseg} {expr    $f_yseg}  {expr 6*$f_zseg} )  endpoint
+point s2  ( {expr 1.6*$f_xseg} {expr  2*$f_yseg}  {expr 4*$f_zseg} )  endpoint
+
+point s3  ( {expr $f_orad*cos($to_rad*(30+$f_dphi))} {expr $f_orad*sin($to_rad*(30+$f_dphi))}  {expr $f_zseg} )  endpoint
+point s4  ( {expr $f_orad*cos($to_rad*(30+$f_dphi))} {expr $f_orad*sin($to_rad*(30+$f_dphi))}      0.0 )         endpoint
+point s5  ( {expr $f_orad*cos($to_rad*(30+$f_dphi))} {expr $f_orad*sin($to_rad*(30+$f_dphi))}  {expr -$f_zseg} ) endpoint
+
+
+bsplinecurve rightRim
+  order 4   ## =cubic
+  controlpointlist ( p_ p0 p1 p2 p3 p4 p5 p6 p7 )  
+  slices {expr $f_sweepSlices}
+  drawcontrols {expr $f_drawControls}
+endbsplinecurve
+
+bsplinecurve leftRim
+  order 4   ## =cubic
+  controlpointlist ( q_ q0 q1 q2 q3 q4 q5 q6 q7 )  
+  slices {expr $f_sweepSlices}
+  drawcontrols {expr $f_drawControls}
+endbsplinecurve
+
+
+bsplinecurve rimSeg
+  order 4   ## =cubic
+  controlpointlist ( s_5 s_4 s_3 s_2 s_1 s0 s1 s2 s3 s4 s5 )  
+  slices {expr $f_sweepSlices}
+  drawcontrols {expr $f_drawControls}
+endbsplinecurve
+
+
+sweep  rightTube
+  path  rightRim
+    minimizetorsion  {expr $f_minTorsion}
+    azimuth  {expr $f_razim}
+    twist    {expr $f_twist}
+  endpath
+  crosssection csRim  endcrosssection  
+  drawpath {expr $f_drawPath}
+  drawsweep {expr $f_drawSweep}
+  solid SLF_HOLLOW
+endsweep
+
+sweep  leftTube
+  path  leftRim
+    minimizetorsion  {expr $f_minTorsion}
+    azimuth  {expr $f_razim}
+    twist    {expr $f_twist}
+  endpath
+  crosssection csRim  endcrosssection  
+  drawpath {expr $f_drawPath}
+  drawsweep {expr $f_drawSweep}
+  solid SLF_HOLLOW
+endsweep
+
+sweep  segmTube
+  path  rimSeg
+    minimizetorsion  {expr $f_minTorsion}
+    azimuth  {expr $f_razim}
+    twist    {expr $f_twist}
+  endpath
+  crosssection csRim  endcrosssection  
+  drawpath {expr $f_drawPath}
+  drawsweep {expr $f_drawSweep}
+  solid SLF_HOLLOW
+endsweep
+
+## hexagonal central saddle face:
+
+#point p0  ( {expr 0.866*$f_wsr} {expr 0.5*$f_wsr}  0 )  endpoint
+#point q0  ( {expr 0.866*$f_wsr} {expr -0.5*$f_wsr}  0 )  endpoint
+
+point h0  ( 0 {expr $f_wsr}   0 )  endpoint
+point h1  ( {expr -0.866*$f_wsr} {expr 0.5*$f_wsr}  0 )  endpoint
+point h2  ( {expr -0.866*$f_wsr} {expr -0.5*$f_wsr}  0 )  endpoint
+point h3  ( 0 {expr -$f_wsr}   0 )  endpoint
+
+face hex (q0 p0 h0 h1 h2 h3) endface
+
+object saddleface (hex)  endobject
+###########################################################################
+
+####  putinng in the control polyhedron for the connecting surface #####################
+
+### Front
+face f0 (q5 q6 s_4 s_3 )   endface
+face f1 (q4 q5 s_3 s_2 )   endface
+face f2 (q3 q4 s_2 s_1 )   endface 
+
+face f3 (p6 p5 s3 s4 )   endface 
+face f4 (p5 p4 s2 s3 )   endface 
+face f5 (p4 p3 s1 s2 )   endface 
+
+face f6 (p3 q3 s_1 s1 )   endface 
+
+face f7 (p3 p2 q2 q3 )   endface 
+face f8 (p2 p1 q1 q2 )   endface 
+
+face f9 (p1 p0 q0 q1 )   endface 
+
+### Back
+face b0 (q6 q5 s_3 s_4 )   endface
+face b1 (q5 q4 s_2 s_3 )   endface
+face b2 (q4 q3 s_1 s_2 )   endface 
+
+face b3 (p5 p6 s4 s3 )   endface 
+face b4 (p4 p5 s3 s2 )   endface 
+face b5 (p3 p4 s2 s1 )   endface 
+
+face b6 (q3 p3 s1 s_1 )   endface 
+
+face b7 (p2 p3 q3 q2 )   endface 
+face b8 (p1 p2 q2 q1 )   endface 
+
+face b9 (p0 p1 q1 q0 )   endface
+
+object fsurf (f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 )   endobject
+object bsurf (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 )   endobject
+
+#########################################################################################
+
+################ SUBDIVISION PARTS#######################################################
+subdivision fSDsurf
+
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)}
+  errormetric {expr $oSubdivision(errormetric)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawcurrent {expr $oSubdivision(drawcurrent)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+  vknots {expr $oSubdivision(a)}
+  vorder {expr $oSubdivision(b)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+  instance fsurf    endinstance
+  instance fsurf  rotate(0 1 0)(180)  endinstance
+
+  instance fsurf  rotate(0 0 1)(120)  endinstance
+  instance fsurf  rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
+
+  instance fsurf  rotate(0 0 1)(-120)  endinstance
+  instance fsurf  rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
+
+  instance saddleface   endinstance
+  instance saddleface rotate(0 1 0)(180)  endinstance
+endsubdivision
+
+#######################################################
+
+subdivision bSDsurf
+
+  lod {expr $oSubdivision(lod)}
+  shading {expr $oSubdivision(shading)}
+
+  type {expr $oSubdivision(type)}
+
+  subdivisions {expr $oSubdivision(subdivisions)}
+  errormetric {expr $oSubdivision(errormetric)}
+  drawcontrols {expr $oSubdivision(drawcontrols)}
+  drawcurrent {expr $oSubdivision(drawcurrent)}
+  drawvertices {expr $oSubdivision(drawvertices)}
+
+  # Hack to get non-uniform knot spacing on some of the edges
+  uknots {expr $oSubdivision(weightededges)}
+  uorder {expr $oSubdivision(weight)}
+  vknots {expr $oSubdivision(a)}
+  vorder {expr $oSubdivision(b)}
+
+  # Hack to assign a tolerance value for the selective subdivision
+  tolerance {expr $oSubdivision(tolerance)}
+  facetsmax {expr $oSubdivision(facetsmax)}
+
+  instance bsurf    endinstance
+  instance bsurf  rotate(0 1 0)(180)  endinstance
+
+  instance bsurf  rotate(0 0 1)(120)  endinstance
+  instance bsurf  rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
+
+  instance bsurf  rotate(0 0 1)(-120)  endinstance
+  instance bsurf  rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
+  instance saddleface   endinstance
+  instance saddleface rotate(1 0 0)(180)  endinstance
+
+endsubdivision
+
+#######################################################
+#######################################################
+
+offset oOffset
+  lod {expr $oOffset(lod)}
+  shading {expr $oOffset(shading)}
+
+  type  {expr $oOffset(type)}    ###  SLF_OFFSET_PERFORATED ## 
+
+  height  {expr $oOffset(height)}   ###  0.10  ## {expr $par_ghgt}    ##
+  width   {expr $oOffset(width)}    ###  0.05  ## {expr $par_gwid}    ##
+  drawcontrols {expr $oOffset(drawcontrols)}
+
+  instance  fSDsurf     endinstance
+
+endoffset
+
+#######################################################
+
+##########   Putting it all together  ###################
+group wedge
+  instance rightTube    endinstance
+  instance leftTube     endinstance
+  instance segmTube     endinstance
+endgroup
+
+group assembly
+#  instance coord_axes   scale( 20 20 20 )  endinstance
+#  instance cube   surface  K  scale({expr 3*$f_d} {expr 3*$f_d} {expr 3*$f_d})   endinstance
+(*
+  instance wedge surface   O   endinstance
+
+  instance wedge surface   G   rotate(0 1 0)(180)  endinstance
+
+  instance wedge surface   C   rotate(0 0 1)(120)  endinstance
+  instance wedge surface   B   rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
+
+  instance wedge surface   M   rotate(0 0 1)(-120)  endinstance
+  instance wedge surface   R   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
+*)
+#  instance fSDsurf surface   L   endinstance              ## <<< THE COMBINED FRONT-SD SURFACE ##
+(*
+  instance bSDsurf surface   A   endinstance
+
+  instance bSDsurf surface   A   rotate(0 1 0)(180)  endinstance
+
+  instance bSDsurf surface   A   rotate(0 0 1)(120)  endinstance
+  instance bSDsurf surface   A   rotate(0 1 0)(180)   rotate(0 0 1)(120)  endinstance
+
+  instance bSDsurf surface   A   rotate(0 0 1)(-120)  endinstance
+  instance bSDsurf surface   A   rotate(0 1 0)(180)   rotate(0 0 1)(-120)  endinstance
+*)
+
+  instance oOffset surface  O   endinstance
+
+endgroup
+
+
+####  Some surface colors  ################################
+
+surface R color (1 0 0) endsurface     # Red
+surface O color (0.9 0.6 0) endsurface # Orange
+surface Y color (1 1 0) endsurface     # Yellow
+surface L color (0.6 0.8 0) endsurface # Lime
+surface G color (0 0.9 0) endsurface   # Green
+surface A color (0 0.9 0.7) endsurface # Aqua
+surface C color (0 1 1) endsurface     # Cyan
+surface U color (0 0.5 1) endsurface   # Uniform
+surface B color (0 0 1) endsurface     # Blue
+surface P color (0.6 0 1) endsurface   # Purple
+surface M color (1 0 1) endsurface     # Magenta
+surface Z color (1 0 0.5) endsurface   # Zinnober
+
+surface K color (0 0 0) endsurface     # blacK
+surface W color (1 1 1) endsurface     # White
+
+
+###########################################################
+# A generic setup for viewing SLF objects
+##########################################
+
+group world
+  lod {expr $gRoot_lod}
+  shading {expr $gRoot_shading}
+
+  instance  assembly   scale( 0.03 0.03 0.03 )   rotate(0 0 1)(-90)  endinstance     
+
+  instance amb
+    id main_amb
+  endinstance
+  instance sun
+    id front_sun
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+  instance anti_sun
+    id back_sun
+    rotate (1 0 0) (180)
+    rotate (0 1 0) (-30)
+    rotate (0 0 1) (-45)
+  endinstance
+endgroup
+
+
+light amb
+  type SLF_AMBIENT
+  color (0.4 0.4 0.4)
+endlight
+
+light sun
+  type SLF_DIRECTIONAL
+  color (0.5 0.5 0.5)
+endlight
+
+light anti_sun
+  type SLF_DIRECTIONAL
+  color (0.3 0.3 0.3)
+endlight
+
+
+camera cam   
+## choose one or the other mode:
+
+#  projection SLF_PARALLEL
+#  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 2.0)
+
+  projection SLF_PERSPECTIVE
+  frustum ( -0.1 -0.1 -2.0 ) ( 0.1 0.1 -0.01)
+endcamera
+
+
+group gCam
+  instance cam
+    id iCam
+    translate ( 0.0 0.0 1 )
+  endinstance
+endgroup
+
+window Window
+  background (0.7 0.7 0.7)
+endwindow
+
+viewport vp Window
+endviewport
+
+render vp gCam.iCam.cam world 
+  light world.front_sun.sun
+  light world.back_sun.anti_sun
+  light world.main_amb.amb
+endrender
+
+########################################
+
+
