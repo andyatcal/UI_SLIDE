@@ -105,14 +105,14 @@ tclinit {
 
     set wsr    [CreateScale $name $root  wsr    "width saddle ribbon"   0.5    0.05    1     0.01   1 horizontal]
     set srad   [CreateScale $name $root  srad   "mean sculpt radius"    2.5    1.0     5     0.1    1 horizontal]
-    set shgt   [CreateScale $name $root  shgt   "mean sculpt height"    3.0    0.2     4     0.1    1 horizontal]
+    set shgt   [CreateScale $name $root  shgt   "mean sculpt height"    2.6    1       5     0.1      1 horizontal]
     set dy     [CreateScale $name $root  dy     "dy extent"             0.36   0.0     1     0.01   1 horizontal]
     set ox     [CreateScale $name $root  ox     "outer x coord"         3.6    0.2     6     0.1    1 horizontal]
     set oy     [CreateScale $name $root  oy     "outer y coord"         1.0    0.2     6     0.1    1 horizontal]
-    set orad   [CreateScale $name $root  orad   "outer radius"          3.0    0.2     6     0.1    1 horizontal]
+    set orad   [CreateScale $name $root  orad   "outer radius"          3.5    0.2     6     0.1    1 horizontal]
     set cw     [CreateScale $name $root  cw     "connecting width"      0.5    0.0     1.5   0.1    1 horizontal]
 #    set dphi   [CreateScale $name $root  dphi   "delta-phi"             5    -10      10     0.5    1 horizontal]
-    set xseg   [CreateScale $name $root  xseg   "segm x coord"          1.5    1.0     3     0.1    1 horizontal]
+#    set xseg   [CreateScale $name $root  xseg   "segm x coord"          1.5    1.0     3     0.1    1 horizontal]
     set yseg   [CreateScale $name $root  yseg   "segm y coord"          1.0    0.2     6     0.1    1 horizontal]
     set zseg   [CreateScale $name $root  zseg   "segm z heigt"          0.27   0.0     0.4   0.01   1 horizontal]
     set d      [CreateScale $name $root  d      "cube diag"             1.0    0.2     2     0.1    1 horizontal]
@@ -127,7 +127,7 @@ tclinit {
     set drawPath     [CreateScale $name $root  drawPath      "drawPath"         1    0    1    1    1 horizontal]
     set sweepSlices  [CreateScale $name $root  sweepSlices   "sweepSlices"     30    8   80    2    1 horizontal]
    
-    pack  $wsr  $srad $shgt  $dy  $orad $xseg $yseg $zseg   $rimrad $rimgon  $drawPath $sweepSlices  -side top -fill x
+    pack  $wsr  $srad $shgt  $dy  $orad $yseg $zseg $drawPath $sweepSlices  -side top -fill x
   }
 
   CreateFunUI $winName f
@@ -146,12 +146,12 @@ endcrosssection
 point p_  ( {expr 0.866*$f_wsr} {expr 0.5*$f_wsr} -1 )  endpoint
 point p0  ( {expr 0.866*$f_wsr} {expr 0.5*$f_wsr}  0 )  endpoint
 point p1  ( {expr 0.866*$f_wsr} {expr 0.5*$f_wsr}  1 )  endpoint
-point p2  ( {expr 0.866*$f_wsr +0.6*$f_srad}   {expr 0.5*$f_wsr +1*$f_dy }  {expr 1.0*$f_shgt} )  endpoint
-point p3  ( {expr 0.866*$f_wsr +0.8*$f_srad} {expr 0.5*$f_wsr +2.5*$f_dy }  {expr 0.7*$f_shgt} )  endpoint
-point p4  ( {expr 0.866*$f_wsr +1.0*$f_srad} {expr 0.5*$f_wsr +4*$f_dy }  {expr 0.4*$f_shgt} )  endpoint
-point p5  ( {expr $f_orad*cos($to_rad*(30))} {expr $f_orad*sin($to_rad*(30))}  {expr $f_zseg} )  endpoint
-point p6  ( {expr $f_orad*cos($to_rad*(30))} {expr $f_orad*sin($to_rad*(30))}      0.0 )         endpoint
-point p7  ( {expr $f_orad*cos($to_rad*(30))} {expr $f_orad*sin($to_rad*(30))}  {expr -$f_zseg} ) endpoint
+point p2  ( {expr 0.866*$f_wsr +0.5*$f_srad}   {expr 0.5*$f_wsr +0.5*$f_dy }  {expr $f_shgt} )  endpoint
+point p3  ( {expr 0.866*$f_wsr +0.7*$f_srad} {expr 0.5*$f_wsr +2.2*$f_dy }  {expr 0.8*$f_shgt} )  endpoint
+point p4  ( {expr 0.866*$f_wsr +1.0*$f_srad} {expr 0.5*$f_wsr +3.5*$f_dy }  {expr 0.45*$f_shgt} )  endpoint
+point p5  ( {expr $f_orad*0.866} {expr $f_orad*0.5}  {expr $f_zseg} )  endpoint
+point p6  ( {expr $f_orad*0.866} {expr $f_orad*0.5}      0.0 )         endpoint
+point p7  ( {expr $f_orad*0.866} {expr $f_orad*0.5}  {expr -$f_zseg} ) endpoint
 
 
 ## left saddle branch:
@@ -159,29 +159,29 @@ point p7  ( {expr $f_orad*cos($to_rad*(30))} {expr $f_orad*sin($to_rad*(30))}  {
 point q_  ( {expr 0.866*$f_wsr} {expr -0.5*$f_wsr} -1 )  endpoint
 point q0  ( {expr 0.866*$f_wsr} {expr -0.5*$f_wsr}  0 )  endpoint
 point q1  ( {expr 0.866*$f_wsr} {expr -0.5*$f_wsr}  1 )  endpoint
-point q2  ( {expr 0.866*$f_wsr +0.6*$f_srad}   {expr -0.5*$f_wsr -1*$f_dy }  {expr 1.0*$f_shgt} )  endpoint
-point q3  ( {expr 0.866*$f_wsr +0.8*$f_srad} {expr -0.5*$f_wsr -2.5*$f_dy }  {expr 0.7*$f_shgt} )  endpoint
-point q4  ( {expr 0.866*$f_wsr +1.0*$f_srad} {expr -0.5*$f_wsr -4*$f_dy }  {expr 0.4*$f_shgt} )  endpoint
-point q5  ( {expr $f_orad*cos($to_rad*(30))} {expr -$f_orad*sin($to_rad*(30))}  {expr $f_zseg} )  endpoint
-point q6  ( {expr $f_orad*cos($to_rad*(30))} {expr -$f_orad*sin($to_rad*(30))}      0.0 )         endpoint
-point q7  ( {expr $f_orad*cos($to_rad*(30))} {expr -$f_orad*sin($to_rad*(30))}  {expr -$f_zseg} ) endpoint
+point q2  ( {expr 0.866*$f_wsr +0.5*$f_srad}   {expr -0.5*$f_wsr -0.5*$f_dy }  {expr $f_shgt} )  endpoint
+point q3  ( {expr 0.866*$f_wsr +0.7*$f_srad} {expr -0.5*$f_wsr -2.2*$f_dy }  {expr 0.8*$f_shgt} )  endpoint
+point q4  ( {expr 0.866*$f_wsr +1.0*$f_srad} {expr -0.5*$f_wsr -3.5*$f_dy }  {expr 0.45*$f_shgt} )  endpoint
+point q5  ( {expr $f_orad*0.866} {expr -$f_orad*0.5}  {expr $f_zseg} )  endpoint
+point q6  ( {expr $f_orad*0.866} {expr -$f_orad*0.5}      0.0 )         endpoint
+point q7  ( {expr $f_orad*0.866} {expr -$f_orad*0.5}  {expr -$f_zseg} ) endpoint
 
 
 ## connecting segment:
 
-point s_5 ( {expr ($f_orad - $f_wsr)*cos($to_rad*(30))} {expr -($f_orad - $f_wsr)*sin($to_rad*(30))}  {expr -$f_zseg} ) endpoint
-point s_4 ( {expr ($f_orad - $f_wsr)*cos($to_rad*(30))} {expr -($f_orad - $f_wsr)*sin($to_rad*(30))}      0.0 )         endpoint
-point s_3 ( {expr ($f_orad - $f_wsr)*cos($to_rad*(30))} {expr -($f_orad - $f_wsr)*sin($to_rad*(30))}  {expr $f_zseg} )  endpoint
+point s_5 ( {expr ($f_orad - 1.2 * $f_wsr)*0.866} {expr -($f_orad - 1.2 * $f_wsr)*0.5}  {expr -$f_zseg} ) endpoint
+point s_4 ( {expr ($f_orad - 1.2 * $f_wsr)*0.866} {expr -($f_orad - 1.2 * $f_wsr)*0.5}      0.0 )         endpoint
+point s_3 ( {expr ($f_orad - 1.2 * $f_wsr)*0.866} {expr -($f_orad - 1.2 * $f_wsr)*0.5}  {expr $f_zseg} )  endpoint
 
-point s_2 ( {expr 1.4*$f_xseg} {expr -1.2*$f_yseg}  {expr 4*$f_zseg} )  endpoint
-point s_1 ( {expr 1.2*$f_xseg} {expr   -$f_yseg}  {expr 6*$f_zseg} )  endpoint
-point s0  ( {expr 1.0*$f_xseg}      0.0           {expr 7*$f_zseg} )  endpoint
-point s1  ( {expr 1.2*$f_xseg} {expr    $f_yseg}  {expr 6*$f_zseg} )  endpoint
-point s2  ( {expr 1.4*$f_xseg} {expr  1.2*$f_yseg}  {expr 4*$f_zseg} )  endpoint
+point s_2 ( {expr $f_srad - 0.2*$f_wsr} {expr -1.4*$f_yseg}  {expr 0.4*$f_shgt - $f_wsr} )  endpoint
+point s_1 ( {expr 0.7*$f_srad } {expr   -$f_yseg}  {expr 0.8*$f_shgt - 1*$f_wsr} )  endpoint
+point s0  ( {expr 0.6*$f_srad }      0.0           {expr 1.0*$f_shgt - 1.5*$f_wsr} )  endpoint
+point s1  ( {expr 0.7*$f_srad } {expr    $f_yseg}  {expr 0.8*$f_shgt - 1*$f_wsr} )  endpoint
+point s2  ( {expr $f_srad - 0.2*$f_wsr} {expr  1.4*$f_yseg}  {expr 0.4*$f_shgt - $f_wsr} )  endpoint
 
-point s3  ( {expr ($f_orad - 1.5 * $f_wsr)*cos($to_rad*(30))} {expr ($f_orad -  1.5 * $f_wsr)*sin($to_rad*(30))}  {expr $f_zseg} )  endpoint
-point s4  ( {expr ($f_orad -  1.5 * $f_wsr)*cos($to_rad*(30))} {expr ($f_orad -  1.5 * $f_wsr)*sin($to_rad*(30))}      0.0 )         endpoint
-point s5  ( {expr ($f_orad -  1.5 * $f_wsr)*cos($to_rad*(30))} {expr ($f_orad -  1.5 * $f_wsr)*sin($to_rad*(30))}  {expr -$f_zseg} ) endpoint
+point s3  ( {expr ($f_orad - 1.2 * $f_wsr)*0.866} {expr ($f_orad -  1.2 * $f_wsr)*0.5}  {expr $f_zseg} )  endpoint
+point s4  ( {expr ($f_orad -  1.2 * $f_wsr)*0.866} {expr ($f_orad -  1.2 * $f_wsr)*0.5}      0.0 )         endpoint
+point s5  ( {expr ($f_orad -  1.2 * $f_wsr)*0.866} {expr ($f_orad -  1.2 * $f_wsr)*0.5}  {expr -$f_zseg} ) endpoint
 
 
 ## hexagonal central saddle face:
@@ -402,12 +402,12 @@ group wedge
 endgroup
 
 group assembly
-(*
+
   instance coord_axes   scale( 20 20 20 )  endinstance
   instance cube   surface  K  scale({expr 3*$f_d} {expr 3*$f_d} {expr 3*$f_d})   endinstance
 
   instance wedge surface   O   endinstance
-
+(*
   instance wedge surface   G   rotate(0 1 0)(180)  endinstance
 
   instance wedge surface   C   rotate(0 0 1)(120)  endinstance
