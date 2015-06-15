@@ -103,7 +103,7 @@ tclinit {
 
     toplevel $root
 
-    set wsr    [CreateScale $name $root  wsr    "width saddle ribbon"   0.5    0.05    1     0.01   1 horizontal]
+    set wsr    [CreateScale $name $root  wsr    "width saddle ribbon"   0.5    0.05    0.7     0.01   1 horizontal]
     set srad   [CreateScale $name $root  srad   "mean sculpt radius"    2.5    1.0     5     0.1    1 horizontal]
     set shgt   [CreateScale $name $root  shgt   "mean sculpt height"    2.6    1       5     0.1      1 horizontal]
     set dy     [CreateScale $name $root  dy     "dy extent"             0.36   0.0     1     0.01   1 horizontal]
